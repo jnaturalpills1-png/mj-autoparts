@@ -11,13 +11,25 @@
     .search-container { max-width: 600px; margin: 20px auto; display: flex; gap: 10px; }
     input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
     .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
-    .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 15px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
+    .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 15px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
     .card img { max-width: 100%; height: 140px; object-fit: contain; border-radius: 4px; background: #fafafa; }
     .card h3 { margin: 10px 0 5px 0; color: #003366; }
     .pines { font-weight: bold; color: #e67e22; font-size: 14px; }
     .descripcion { font-size: 13px; color: #555; margin: 8px 0; min-height: 36px; }
     .btn-add { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; display: block; margin: 0 auto 20px auto; }
     .btn-add:hover { background: #218838; }
+    .actions { display: flex; gap: 5px; margin-top: 10px; }
+    .btn-action { flex: 1; padding: 6px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; color: white; }
+    .btn-edit { background-color: #ed8936; }
+    .btn-delete { background-color: #e53e3e; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; }
+    .form-group { margin-bottom: 12px; text-align: left; }
+    .form-group label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 14px; }
+    .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-save { background: #28a745; color: white; border: none; padding: 10px; flex: 1; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-cancel { background: #718096; color: white; border: none; padding: 10px; flex: 1; border-radius: 4px; cursor: pointer; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -25,13 +37,60 @@
   <h1>Catálogo de Conectores y Plúgues</h1>
   <p class="subtitle">M & J Distributors</p>
 
+  <button class="btn-add" onclick="abrirModalNuevo()">+ Añadir Nuevo Plúg</button>
+
   <div class="search-container">
     <input type="text" id="searchInput" onkeyup="filtrarConectores()" placeholder="Buscar por código (ej. 2837), descripción o pines...">
   </div>
 
   <div class="grid-container" id="connectorGrid"></div>
 
+  <div class="modal" id="modalForm">
+    <div class="modal-content">
+      <h3 id="modalTitle">Añadir Plúg</h3>
+      <input type="hidden" id="editId">
+      <div class="form-group">
+        <label>Código:</label>
+        <input type="text" id="inputCodigo">
+      </div>
+      <div class="form-group">
+        <label>Pines:</label>
+        <input type="text" id="inputPines" placeholder="Ej. 3 PINES">
+      </div>
+      <div class="form-group">
+        <label>Descripción / Tipo:</label>
+        <input type="text" id="inputDescripcion" placeholder="Ej. CAM SENSOR TOYOTA">
+      </div>
+      <div class="form-group">
+        <label>Imagen:</label>
+        <input type="file" id="inputFile" accept="image/*" onchange="convertirImagen(event)">
+        <img id="imagePreview" src="" style="max-width: 100px; display: none; margin-top: 10px;">
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-save" onclick="guardarEntrada()">Guardar en la Nube</button>
+        <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBPHmtSreGyEcYCmowf-WHWILlWVQUhFHc",
+      authDomain: "catalogo-mj.firebaseapp.com",
+      databaseURL: "https://catalogo-mj-default-rtdb.firebaseio.com",
+      projectId: "catalogo-mj",
+      storageBucket: "catalogo-mj.firebasestorage.app",
+      messagingSenderId: "749032896104",
+      appId: "1:749032896104:web:c009538bc8fb1cb4ed2ddd"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const refConectores = database.ref('conectores');
+
     const conectoresIniciales = [
       { codigo: "RY-280", pines: "4 PATAS", descripcion: "RELAY GM 4 PTS ANCHO", imagen: "https://via.placeholder.com/150" },
       { codigo: "M-578", pines: "2 PINES", descripcion: "VVTI", imagen: "https://via.placeholder.com/150" },
@@ -103,6 +162,23 @@
       { codigo: "M-2896 90980-11149", pines: "2 PINES", descripcion: "COMPRESOR /PULGA", imagen: "https://via.placeholder.com/150" }
     ];
 
+    let catalogo = [];
+    let tempImagenBase64 = "";
+
+    refConectores.on('value', (snapshot) => {
+      const datos = snapshot.val();
+      if (datos) {
+        catalogo = Object.keys(datos).map(key => datos[key]);
+      } else {
+        conectoresIniciales.forEach(item => {
+          const id = item.codigo.replace(/[^a-zA-Z0-9_-]/g, '_');
+          refConectores.child(id).set({ id, ...item });
+        });
+        return;
+      }
+      filtrarConectores();
+    });
+
     function renderizar(conectores) {
       const grid = document.getElementById('connectorGrid');
       grid.innerHTML = '';
@@ -110,10 +186,14 @@
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-          <img src="${c.imagen}" alt="${c.codigo}">
+          <img src="${c.imagen || 'https://via.placeholder.com/150'}" alt="${c.codigo}">
           <h3>${c.codigo}</h3>
-          <div class="pines">${c.pines}</div>
+          <div class="pines">${c.pines || ''}</div>
           <div class="descripcion">${c.descripcion || 'Sin descripción'}</div>
+          <div class="actions">
+            <button class="btn-action btn-edit" onclick="abrirModalEditar('${c.id}')">✏️ Editar</button>
+            <button class="btn-action btn-delete" onclick="eliminarEntrada('${c.id}')">🗑️ Borrar</button>
+          </div>
         `;
         grid.appendChild(card);
       });
@@ -121,15 +201,96 @@
 
     function filtrarConectores() {
       const texto = document.getElementById('searchInput').value.toLowerCase();
-      const filtrados = conectoresIniciales.filter(c => 
-        c.codigo.toLowerCase().includes(texto) ||
-        c.pines.toLowerCase().includes(texto) ||
+      const filtrados = catalogo.filter(c => 
+        (c.codigo && c.codigo.toLowerCase().includes(texto)) ||
+        (c.pines && c.pines.toLowerCase().includes(texto)) ||
         (c.descripcion && c.descripcion.toLowerCase().includes(texto))
       );
       renderizar(filtrados);
     }
 
-    renderizar(conectoresIniciales);
+    function abrirModalNuevo() {
+      document.getElementById('modalTitle').innerText = 'Añadir Plúg';
+      document.getElementById('editId').value = '';
+      document.getElementById('inputCodigo').value = '';
+      document.getElementById('inputPines').value = '';
+      document.getElementById('inputDescripcion').value = '';
+      tempImagenBase64 = '';
+      document.getElementById('imagePreview').style.display = 'none';
+      document.getElementById('modalForm').style.display = 'flex';
+    }
+
+    function abrirModalEditar(id) {
+      const item = catalogo.find(c => c.id === id);
+      if(!item) return;
+      document.getElementById('modalTitle').innerText = 'Editar Plúg';
+      document.getElementById('editId').value = item.id;
+      document.getElementById('inputCodigo').value = item.codigo;
+      document.getElementById('inputPines').value = item.pines || '';
+      document.getElementById('inputDescripcion').value = item.descripcion || '';
+      tempImagenBase64 = item.imagen || '';
+      
+      const preview = document.getElementById('imagePreview');
+      if (item.imagen) {
+        preview.src = item.imagen;
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+      document.getElementById('modalForm').style.display = 'flex';
+    }
+
+    function convertirImagen(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          tempImagenBase64 = e.target.result;
+          const preview = document.getElementById('imagePreview');
+          preview.src = tempImagenBase64;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function guardarEntrada() {
+      const codigo = document.getElementById('inputCodigo').value.trim();
+      const pines = document.getElementById('inputPines').value.trim();
+      const descripcion = document.getElementById('inputDescripcion').value.trim();
+      const editId = document.getElementById('editId').value;
+
+      if (!codigo) {
+        alert("El campo 'Código' es obligatorio.");
+        return;
+      }
+
+      const conectorId = editId || codigo.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const nuevoItem = {
+        id: conectorId,
+        codigo: codigo,
+        pines: pines,
+        descripcion: descripcion,
+        imagen: tempImagenBase64 || 'https://via.placeholder.com/150'
+      };
+
+      refConectores.child(conectorId).set(nuevoItem)
+        .then(() => {
+          alert("¡Guardado en la nube!");
+          cerrarModal();
+        })
+        .catch(err => alert("Error: " + err.message));
+    }
+
+    function eliminarEntrada(id) {
+      if (confirm("¿Deseas eliminar este conector de la nube?")) {
+        refConectores.child(id).remove();
+      }
+    }
+
+    function cerrarModal() {
+      document.getElementById('modalForm').style.display = 'none';
+    }
   </script>
 </body>
 </html>
