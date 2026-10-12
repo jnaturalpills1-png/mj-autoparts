@@ -195,8 +195,8 @@
           <div class="pines">${c.pines || ''}</div>
           <div class="descripcion">${c.descripcion || 'Sin descripción'}</div>
           <div class="actions">
-            <button class="btn-action btn-edit" onclick="abrirModalEditar('${c.id}')">✏️ Editar</button>
-            <button class="btn-action btn-delete" onclick="eliminarEntrada('${c.id}')">🗑️ Borrar</button>
+            <button class="btn-action btn-edit admin-only" onclick="abrirModalEditar('${c.id}')">✏️ Editar</button>
+            <button class="btn-action btn-delete admin-only" onclick="eliminarEntrada('${c.id}')">🗑️ Borrar</button>
           </div>
         `;
         grid.appendChild(card);
