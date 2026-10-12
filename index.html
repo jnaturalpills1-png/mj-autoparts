@@ -304,13 +304,24 @@
 </div>
 
 <script>
+<script>
 function accesoAdmin() {
     let password = prompt("Ingresa la contraseña de administración:");
-    if (password === "@1Joseortiz") { // Puedes cambiar "TuContraseña123" por tu clave secreta
+    if (password === "AQUÍ_TU_CONTRASEÑA") { // Pon tu contraseña aquí
         alert("¡Acceso concedido!");
+        
+        // 1. Muestra el botón principal de añadir
         document.querySelectorAll('.admin-only').forEach(function(el) {
             el.style.display = "block";
         });
+
+        // 2. Muestra automáticamente todos los botones de Editar y Eliminar de las tarjetas
+        // (Esto busca cualquier botón de acción dentro de la lista de productos)
+        let botonesAccion = document.querySelectorAll('.card button, .producto button, .acciones button, [class*="edit"], [class*="delete"]');
+        botonesAccion.forEach(function(btn) {
+            btn.style.display = "inline-block"; // o "block" según tu diseño
+        });
+
     } else if (password !== null) {
         alert("Contraseña incorrecta.");
     }
