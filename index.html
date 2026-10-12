@@ -38,7 +38,7 @@
 </head>
 <body>
 
-  <h1>Catálogo de Conectores y Plúgues</h1>
+  <h1>Catálogo de Conectores y Accesorios</h1>
   <p class="subtitle">M & J Distributors</p>
 
   <button class="btn-add admin-only" onclick="abrirModalNuevo()">&#43; Añadir Nuevo Plúg</button>
@@ -302,27 +302,36 @@
 </div>
 
 <script>
+// Verificar si ya habías ingresado la contraseña antes
+let esAdmin = sessionStorage.getItem("adminAutenticado") === "true";
+if (esAdmin) {
+    document.addEventListener("DOMContentLoaded", function() {
+        mostrarAdmin();
+    });
+}
+
 function accesoAdmin() {
     let password = prompt("Ingresa la contraseña de administración:");
-    if (password === "@1Joseortiz") { // Pon tu contraseña aquí
+    if (password === "@1Joseortiz") { 
         alert("¡Acceso concedido!");
-        
-        // 1. Muestra el botón principal de añadir
-        document.querySelectorAll('.admin-only').forEach(function(el) {
-            el.style.display = "block";
-        });
-
-        // 2. Muestra automáticamente todos los botones de Editar y Eliminar de las tarjetas
-        // (Esto busca cualquier botón de acción dentro de la lista de productos)
-        let botonesAccion = document.querySelectorAll('.card button, .producto button, .acciones button, [class*="edit"], [class*="delete"]');
-        botonesAccion.forEach(function(btn) {
-            btn.style.display = "inline-block"; // o "block" según tu diseño
-        });
-
+        sessionStorage.setItem("adminAutenticado", "true");
+        mostrarAdmin();
     } else if (password !== null) {
         alert("Contraseña incorrecta.");
     }
 }
+
+function mostrarAdmin() {
+    // Muestra el botón principal de añadir
+    document.querySelectorAll('.admin-only').forEach(function(el) {
+        el.style.display = "block";
+    });
+    // Muestra todos los botones de las tarjetas actuales y futuras
+    document.querySelectorAll('.card button, .producto button, .acciones button, [class*="edit"], [class*="delete"]').forEach(function(btn) {
+        btn.style.display = "inline-block";
+    });
+}
+</script>
 </script>
 </body>
 </html>
