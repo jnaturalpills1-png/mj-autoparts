@@ -31,13 +31,17 @@
     .btn-save { background: #28a745; color: white; border: none; padding: 10px; flex: 1; border-radius: 4px; cursor: pointer; font-weight: bold; }
     .btn-cancel { background: #718096; color: white; border: none; padding: 10px; flex: 1; border-radius: 4px; cursor: pointer; font-weight: bold; }
   </style>
+  /* Ocultar elementos de administración por defecto */
+.admin-only {
+    display: none !important;
+}
 </head>
 <body>
 
   <h1>Catálogo de Conectores y Plúgues</h1>
   <p class="subtitle">M & J Distributors</p>
 
-  <button class="btn-add" onclick="abrirModalNuevo()">+ Añadir Nuevo Plúg</button>
+  <button class="btn-add admin-only" onclick="abrirModalNuevo()">+ Añadir Nuevo Plúg</button>
 
   <div class="search-container">
     <input type="text" id="searchInput" onkeyup="filtrarConectores()" placeholder="Buscar por código (ej. 2837), descripción o pines...">
@@ -294,3 +298,21 @@
   </script>
 </body>
 </html>
+<!-- Botón discreto de acceso para ti al pie de la página -->
+<div style="text-align: center; margin: 40px 0 20px 0;">
+    <button onclick="accesoAdmin()" style="background: none; border: none; color: #888; cursor: pointer; font-size: 12px;">🔑 Admin</button>
+</div>
+
+<script>
+function accesoAdmin() {
+    let password = prompt("Ingresa la contraseña de administración:");
+    if (password === "@1Joseortiz") { // Puedes cambiar "TuContraseña123" por tu clave secreta
+        alert("¡Acceso concedido!");
+        document.querySelectorAll('.admin-only').forEach(function(el) {
+            el.style.display = "block";
+        });
+    } else if (password !== null) {
+        alert("Contraseña incorrecta.");
+    }
+}
+</script>
