@@ -1,330 +1,295 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M & J Distributors - Catálogo de Conectores</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-        h1 { color: #003366; text-align: center; margin-bottom: 5px; }
-        p.subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
-        .search-container { max-width: 600px; margin: 20px auto; display: flex; gap: 10px; }
-        input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 15px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
-        .card img { max-width: 100%; height: 140px; object-fit: contain; border-radius: 4px; background: #fafafa; }
-        .card h3 { margin: 10px 0 5px 0; color: #003366; }
-        .pines { font-weight: bold; color: #e67e22; font-size: 14px; }
-        .descripcion { font-size: 13px; color: #555; margin: 8px 0; min-height: 36px; }
-        .btn-add { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; display: none; margin: 0 auto 20px auto; }
-        .btn-add:hover { background: #218838; }
-        .actions { display: flex; gap: 5px; margin-top: 10px; }
-        .btn-action { flex: 1; padding: 6px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; color: white; }
-        .btn-edit { background-color: #ed8936; }
-        .btn-delete { background-color: #e53e3e; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; }
-        .form-group { margin-bottom: 12px; text-align: left; }
-        .form-group label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 14px; }
-        .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
-        .btn-save { background: #28a745; color: white; border: none; padding: 10px; flex: 1; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn-cancel { background: #718096; color: white; border: none; padding: 10px; flex: 1; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M & J Distributors - Catálogo de Conectores</title>
+<style>
+:root { --azul:#003366; --naranja:#e67e22; --wa:#1fa855; --fondo:#f4f6f9; --borde:#d9dee6; }
+* { box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: var(--fondo); margin: 0; padding: 0 16px 90px; color: #2b2f36; }
+header { max-width: 1200px; margin: 0 auto; padding: 22px 0 6px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+h1 { color: var(--azul); margin: 0; font-size: 24px; }
+.subtitle { margin: 2px 0 0; color: #667; font-size: 14px; }
+.btn-wa-top { background: var(--wa); color: #fff; text-decoration: none; padding: 10px 16px; border-radius: 24px; font-weight: bold; font-size: 15px; }
+main { max-width: 1200px; margin: 0 auto; }
+.search-container { margin: 14px 0 10px; display: flex; gap: 8px; }
+#searchInput { flex: 1; padding: 13px; border: 1px solid var(--borde); border-radius: 8px; font-size: 16px; }
+.filtro { margin: 8px 0; }
+.filtro b { display: block; font-size: 13px; color: #556; margin-bottom: 4px; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.chip { flex: none; background: #fff; border: 1px solid var(--borde); color: var(--azul); padding: 8px 14px; border-radius: 20px; font-size: 14px; cursor: pointer; }
+.chip.on { background: var(--azul); color: #fff; border-color: var(--azul); }
+.chip:focus-visible, button:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+.resumen { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; font-size: 14px; color: #556; }
+.link { background: none; border: none; color: var(--azul); text-decoration: underline; cursor: pointer; font-size: 14px; }
+.grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+.card { background: #fff; border-radius: 10px; border: 1px solid var(--borde); padding: 14px; text-align: center; display: flex; flex-direction: column; }
+.card img { width: 100%; height: 130px; object-fit: contain; background: #fafafa; border-radius: 6px; }
+.card h3 { margin: 10px 0 4px; color: var(--azul); font-size: 18px; }
+.pines { font-weight: bold; color: var(--naranja); font-size: 14px; }
+.descripcion { font-size: 13px; color: #555; margin: 6px 0; min-height: 34px; flex: 1; }
+.precio { font-weight: bold; font-size: 17px; margin-bottom: 6px; }
+.buy { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.btn { border: none; border-radius: 6px; padding: 10px; font-size: 14px; font-weight: bold; cursor: pointer; color: #fff; }
+.btn-wa { background: var(--wa); }
+.btn-cart { background: #fff; color: var(--azul); border: 2px solid var(--azul); }
+.actions { display: none; gap: 6px; margin-top: 8px; }
+.admin .actions { display: flex; }
+.actions .btn { flex: 1; padding: 7px; font-size: 12px; }
+.btn-edit { background: #ed8936; } .btn-delete { background: #e53e3e; }
+.btn-add { background: #28a745; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; display: none; margin: 10px 0; }
+.admin .btn-add { display: block; }
+.vacio { grid-column: 1 / -1; text-align: center; padding: 30px 10px; color: #556; }
+.barra-pedido { position: fixed; left: 0; right: 0; bottom: 0; background: var(--azul); color: #fff; padding: 12px 16px; display: none; justify-content: space-between; align-items: center; z-index: 900; }
+.barra-pedido button { background: var(--naranja); color: #fff; border: none; padding: 10px 18px; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; }
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); align-items: center; justify-content: center; z-index: 1000; }
+.modal-content { background: #fff; padding: 22px; border-radius: 10px; width: 92%; max-width: 420px; max-height: 88vh; overflow-y: auto; }
+.form-group { margin-bottom: 12px; text-align: left; }
+.form-group label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 14px; }
+.form-group input { width: 100%; padding: 9px; border: 1px solid var(--borde); border-radius: 4px; }
+.modal-buttons { display: flex; gap: 10px; margin-top: 16px; }
+.modal-buttons .btn { flex: 1; }
+.linea { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--borde); font-size: 14px; }
+.linea span { flex: 1; }
+.linea button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--borde); background: #fff; font-size: 16px; cursor: pointer; }
+footer { text-align: center; margin: 30px 0 10px; }
+footer button { background: none; border: none; color: #888; cursor: pointer; font-size: 12px; }
+</style>
 </head>
 <body>
-
+<header>
+  <div>
     <h1>Catálogo de Conectores y Accesorios</h1>
     <p class="subtitle">M & J Distributors</p>
+  </div>
+  <a class="btn-wa-top" id="waTop" target="_blank" rel="noopener">Escríbenos por WhatsApp</a>
+</header>
 
-    <button class="btn-add" id="btnAddMain" onclick="abrirModalNuevo()">&#43; Añadir Nuevo Plúg</button>
+<main id="app">
+  <button class="btn-add" onclick="abrirModalNuevo()">&#43; Añadir Nuevo Plúg</button>
 
-    <div class="search-container">
-        <input type="text" id="searchInput" onkeyup="filtrarConectores()" placeholder="Buscar por código (ej. 2837), descripción o pines...">
+  <div class="search-container">
+    <input type="search" id="searchInput" oninput="filtrar()" placeholder="Buscar por código (ej. 2837), descripción o pines...">
+  </div>
+
+  <div class="filtro"><b>Tipo de pieza</b><div class="chips" id="chipsCat"></div></div>
+  <div class="filtro"><b>Cantidad de pines</b><div class="chips" id="chipsPines"></div></div>
+  <div class="filtro"><b>Marca</b><div class="chips" id="chipsMarca"></div></div>
+
+  <div class="resumen"><span id="contador"></span><button class="link" onclick="limpiar()">Quitar filtros</button></div>
+  <div class="grid-container" id="connectorGrid"></div>
+</main>
+
+<footer><button onclick="accesoAdmin()">🔑 Admin</button></footer>
+
+<div class="barra-pedido" id="barraPedido">
+  <span id="barraTexto"></span>
+  <button onclick="abrirCarrito()">Ver pedido</button>
+</div>
+
+<div class="modal" id="modalCarrito">
+  <div class="modal-content">
+    <h3>Tu pedido</h3>
+    <div id="listaCarrito"></div>
+    <div class="modal-buttons">
+      <button class="btn btn-wa" onclick="enviarPedido()">Enviar pedido por WhatsApp</button>
     </div>
-
-    <div class="grid-container" id="connectorGrid"></div>
-
-    <div class="modal" id="modalForm">
-        <div class="modal-content">
-            <h3 id="modalTitle">Añadir Plúg</h3>
-            <input type="hidden" id="editId">
-            <div class="form-group">
-                <label>Código:</label>
-                <input type="text" id="inputCodigo">
-            </div>
-            <div class="form-group">
-                <label>Pines:</label>
-                <input type="text" id="inputPines" placeholder="Ej. 3 PINES">
-            </div>
-            <div class="form-group">
-                <label>Descripción / Tipo:</label>
-                <input type="text" id="inputDescripcion" placeholder="Ej. CAM SENSOR TOYOTA">
-            </div>
-            <div class="form-group">
-                <label>Imagen:</label>
-                <input type="file" id="inputFile" accept="image/*" onchange="convertirImagen(event)">
-                <img id="imagePreview" src="" style="max-width: 100px; display: none; margin-top: 10px;">
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-save" onclick="guardarEntrada()">Guardar en la Nube</button>
-                <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
-            </div>
-        </div>
+    <div class="modal-buttons">
+      <button class="btn" style="background:#718096" onclick="cerrar('modalCarrito')">Seguir viendo</button>
+      <button class="btn" style="background:#e53e3e" onclick="vaciarCarrito()">Vaciar</button>
     </div>
+  </div>
+</div>
 
-    <!-- Botón discreto de acceso para ti al pie de la página -->
-    <div style="text-align: center; margin: 40px 0 20px 0;">
-        <button onclick="accesoAdmin()" style="background: none; border: none; color: #888; cursor: pointer; font-size: 12px;">🔑 Admin</button>
+<div class="modal" id="modalForm">
+  <div class="modal-content">
+    <h3 id="modalTitle">Añadir Plúg</h3>
+    <input type="hidden" id="editId">
+    <div class="form-group"><label>Código:</label><input type="text" id="inputCodigo"></div>
+    <div class="form-group"><label>Pines:</label><input type="text" id="inputPines" placeholder="Ej. 3 PINES"></div>
+    <div class="form-group"><label>Descripción / Tipo:</label><input type="text" id="inputDescripcion" placeholder="Ej. CAM SENSOR TOYOTA"></div>
+    <div class="form-group"><label>Precio (opcional):</label><input type="text" id="inputPrecio" placeholder="Ej. $8.00"></div>
+    <div class="form-group">
+      <label>Imagen:</label>
+      <input type="file" id="inputFile" accept="image/*" onchange="convertirImagen(event)">
+      <img id="imagePreview" src="" alt="" style="max-width:100px;display:none;margin-top:10px">
     </div>
-
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyBPHmtSreGyEcYCmowf-WHWILlWVQUhFHc",
-            authDomain: "catalogo-mj.firebaseapp.com",
-            databaseURL: "https://catalogo-mj-default-rtdb.firebaseio.com",
-            projectId: "catalogo-mj",
-            storageBucket: "catalogo-mj.firebasestorage.app",
-            messagingSenderId: "749032896104",
-            appId: "1:749032896104:web:c009538bc8fb1cb4ed2ddd"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const refConectores = database.ref('conectores');
-
-        const conectoresIniciales = [
-            { codigo: "RY-280", pines: "4 PATAS", descripcion: "RELAY GM 4 PTS ANCHO", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-578", pines: "2 PINES", descripcion: "VVTI", imagen: "https://via.placeholder.com/150" },
-            { codigo: "RY-595", pines: "5 PATAS", descripcion: "RELAY", imagen: "https://via.placeholder.com/150" },
-            { codigo: "RY-601", pines: "4 PATAS", descripcion: "RELAY GM 4 PTS FINO", imagen: "https://via.placeholder.com/150" },
-            { codigo: "RY-604", pines: "5 PATAS", descripcion: "RELAY GM 5 ANCHO", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-619", pines: "3 PINES", descripcion: "TPS", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-745", pines: "3 PINES", descripcion: "TPS VARIOS", imagen: "https://via.placeholder.com/150" },
-            { codigo: "RY-790", pines: "5 PATAS", descripcion: "RELAY 4 PTS ANCHA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-819", pines: "2 PINES", descripcion: "BOBINA FORD/ MAZDA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-820", pines: "2 PINES", descripcion: "TIMING CAM", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-821", pines: "3 PINES", descripcion: "ALTERNADOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-905", pines: "2 PINES", descripcion: "ALTERNADOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-935", pines: "5 PINES", descripcion: "MAF SENSOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1024", pines: "2 PINES", descripcion: "FUEL INJECTOR / VAPOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1028", pines: "3 PINES", descripcion: "", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1038", pines: "3 PINES", descripcion: "MAP SENSOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1415", pines: "2 PINES", descripcion: "BOBINA TOYOTA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1441", pines: "2 PINES", descripcion: "BOBINA HYUNDAI", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1461", pines: "4 PINES", descripcion: "", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1530", pines: "2 PINES", descripcion: "COMPRESOR TOYOTA/PULGUITA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1676", pines: "2 PINES", descripcion: "SENSOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "RY-1676", pines: "5 PATAS", descripcion: "RELAY 5 PTS FORD", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1712", pines: "5 PINES", descripcion: "FLOWMETER TOYOTA/SUZUKI", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1716", pines: "2 PINES", descripcion: "VVTI", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1780", pines: "6 PINES", descripcion: "IDDLE", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1923", pines: "2 PINES TX40", descripcion: "COOLANT SENSOR TX40", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-1931", pines: "4 PINES 90980-10711", descripcion: "TPS", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2034", pines: "2 PINES TX109", descripcion: "COOLANT SENSOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2083", pines: "2 PINES", descripcion: "COOLANT SENSOR / PS", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2088", pines: "3 PINES", descripcion: "TPS", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2291", pines: "2 PINES", descripcion: "FUEL INJECTOR HONDA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2326", pines: "2 PINES", descripcion: "CAM SENSOR TOYOTA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2328", pines: "2 PINES", descripcion: "FUEL INJECTOR / KNOCK SENSOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2330", pines: "2 PINES", descripcion: "FUEL INJECTOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2438", pines: "3 PINES", descripcion: "SPEED SENSOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2526", pines: "3 PINES", descripcion: "BOBINA HONDA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2527", pines: "4 Pines", descripcion: "PLUG BOBINA TOYOTA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2532", pines: "2 PINES", descripcion: "CRANK SENSOR NISSAN", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2538", pines: "1 PINES", descripcion: "OIL PRESSURE SENDER", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2539", pines: "3 PINES", descripcion: "COMPRESOR AIRE", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2543", pines: "2 PINES", descripcion: "SENSOR PRESION ACEITE", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2544", pines: "2 PINES", descripcion: "FUEL INJECTOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2545", pines: "1 PINES", descripcion: "KNOCK DETONATION SENSOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2644", pines: "4 PINES", descripcion: "BOMBILLA HONDA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2670", pines: "2 PINES", descripcion: "CONNECTOR BOMBILLA 1157", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2808", pines: "2 PINES", descripcion: "CRANKSHAFT", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2837", pines: "3 PINES", descripcion: "CAM SENSOR TOYOTA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2850", pines: "2 PINES", descripcion: "COOLANT SENSOR HONDA /SUBARU", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2860", pines: "2 PINES", descripcion: "VVTI", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2883", pines: "4 PINES", descripcion: "ALTERNADOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2888", pines: "2 PINES", descripcion: "INJECTOR VARIOS", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2908", pines: "2 PINES", descripcion: "", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2993", pines: "5 PINES", descripcion: "", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3000", pines: "8 PINES", descripcion: "FLOWMETER 7 CABLES MIT", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3080", pines: "3 PINES", descripcion: "BOBINA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3086", pines: "4 PINES", descripcion: "SENSOR OXIGENO HONDA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3094", pines: "3 PINES", descripcion: "COOLANT SENSOR HYUNDAI", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3099", pines: "4 PINES", descripcion: "COOLANT SENSOR", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3109", pines: "1 PINES", descripcion: "", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3133", pines: "4 PINES", descripcion: "SENSOR OXIGENO", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3152", pines: "6 PINES", descripcion: "IDDLE", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3175", pines: "3 PINES", descripcion: "FAN MODULO", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3201", pines: "4 PINES", descripcion: "ALTERNADOR VARIOS", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3203", pines: "2 PINES", descripcion: "COOLANT SENSOR TOYOTA", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3289", pines: "2 PINES", descripcion: "FUEL INJECTOR HYUNDAI", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-3314", pines: "3 PINES", descripcion: "FAN MODULO", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2600 90075-60036", pines: "6 PINES", descripcion: "FOCOS", imagen: "https://via.placeholder.com/150" },
-            { codigo: "M-2896 90980-11149", pines: "2 PINES", descripcion: "COMPRESOR /PULGA", imagen: "https://via.placeholder.com/150" }
-        ];
-
-        let catalogo = [];
-        let tempImagenBase64 = "";
-
-        refConectores.on('value', (snapshot) => {
-            const datos = snapshot.val();
-            if (datos) {
-                catalogo = Object.keys(datos).map(key => datos[key]);
-            } else {
-                conectoresIniciales.forEach(item => {
-                    const id = item.codigo.replace(/[^a-zA-Z0-9_-]/g, '_');
-                    refConectores.child(id).set({ id, ...item });
-                });
-                return;
-            }
-            filtrarConectores();
-        });
-
-        function renderizar(conectores) {
-            const grid = document.getElementById('connectorGrid');
-            grid.innerHTML = '';
-            
-            let esAdmin = sessionStorage.getItem("adminAutenticado") === "true";
-            let displayStyle = esAdmin ? "flex" : "none";
-
-            conectores.forEach(c => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <img src="${c.imagen || 'https://via.placeholder.com/150'}" alt="${c.codigo}">
-                    <h3>${c.codigo}</h3>
-                    <div class="pines">${c.pines || ''}</div>
-                    <div class="descripcion">${c.descripcion || 'Sin descripción'}</div>
-                    <div class="actions" style="display: ${displayStyle};">
-                        <button class="btn-action btn-edit" onclick="abrirModalEditar('${c.id}')">✏️ Editar</button>
-                        <button class="btn-action btn-delete" onclick="eliminarEntrada('${c.id}')">🗑️ Borrar</button>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-        }
-
-        function filtrarConectores() {
-            const texto = document.getElementById('searchInput').value.toLowerCase();
-            const filtrados = catalogo.filter(c => 
-                (c.codigo && c.codigo.toLowerCase().includes(texto)) || 
-                (c.pines && c.pines.toLowerCase().includes(texto)) || 
-                (c.descripcion && c.descripcion.toLowerCase().includes(texto))
-            );
-            renderizar(filtrados);
-        }
-
-        function abrirModalNuevo() {
-            document.getElementById('modalTitle').innerText = 'Añadir Plúg';
-            document.getElementById('editId').value = '';
-            document.getElementById('inputCodigo').value = '';
-            document.getElementById('inputPines').value = '';
-            document.getElementById('inputDescripcion').value = '';
-            tempImagenBase64 = '';
-            document.getElementById('imagePreview').style.display = 'none';
-            document.getElementById('modalForm').style.display = 'flex';
-        }
-
-        function abrirModalEditar(id) {
-            const item = catalogo.find(c => c.id === id);
-            if(!item) return;
-            document.getElementById('modalTitle').innerText = 'Editar Plúg';
-            document.getElementById('editId').value = item.id;
-            document.getElementById('inputCodigo').value = item.codigo;
-            document.getElementById('inputPines').value = item.pines || '';
-            document.getElementById('inputDescripcion').value = item.descripcion || '';
-            tempImagenBase64 = item.imagen || '';
-            const preview = document.getElementById('imagePreview');
-            if (item.imagen) {
-                preview.src = item.imagen;
-                preview.style.display = 'block';
-            } else {
-                preview.style.display = 'none';
-            }
-            document.getElementById('modalForm').style.display = 'flex';
-        }
-
-        function convertirImagen(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    tempImagenBase64 = e.target.result;
-                    const preview = document.getElementById('imagePreview');
-                    preview.src = tempImagenBase64;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function guardarEntrada() {
-            const codigo = document.getElementById('inputCodigo').value.trim();
-            const pines = document.getElementById('inputPines').value.trim();
-            const descripcion = document.getElementById('inputDescripcion').value.trim();
-            const editId = document.getElementById('editId').value;
-
-            if (!codigo) {
-                alert("El campo 'Código' es obligatorio.");
-                return;
-            }
-
-            const conectorId = editId || codigo.replace(/[^a-zA-Z0-9_-]/g, '_');
-            const nuevoItem = {
-                id: conectorId,
-                codigo: codigo,
-                pines: pines,
-                descripcion: descripcion,
-                imagen: tempImagenBase64 || 'https://via.placeholder.com/150'
-            };
-
-            refConectores.child(conectorId).set(nuevoItem)
-                .then(() => {
-                    alert("¡Guardado en la nube!");
-                    cerrarModal();
-                })
-                .catch(err => alert("Error: " + err.message));
-        }
-
-        function eliminarEntrada(id) {
-            if (confirm("¿Deseas eliminar este conector de la nube?")) {
-                refConectores.child(id).remove();
-            }
-        }
-
-        function cerrarModal() {
-            document.getElementById('modalForm').style.display = 'none';
-        }
-
-        // Sistema de Contraseña
-        document.addEventListener("DOMContentLoaded", function() {
-            if (sessionStorage.getItem("adminAutenticado") === "true") {
-                mostrarAdminUI();
-            }
-        });
-
-        function accesoAdmin() {
-            let password = prompt("Ingresa la contraseña de administración:");
-            if (password === "@1Joseortiz") { 
-                alert("¡Acceso concedido!");
-                sessionStorage.setItem("adminAutenticado", "true");
-                mostrarAdminUI();
-            } else if (password !== null) {
-                alert("Contraseña incorrecta.");
-            }
-        }
-
-        function mostrarAdminUI() {
-            document.getElementById('btnAddMain').style.display = "block";
-            filtrarConectores(); // Vuelve a dibujar el catálogo mostrando los botones de editar/borrar
-        }
-    </script>
-   <!-- Botón discreto de acceso administrador -->
-    <div style="text-align: center; margin: 40px 0 20px 0;">
-        <button onclick="accesoAdmin()" style="background: none; border: none; color: #888; cursor: pointer; font-size: 12px;">🔑 Admin</button>
+    <div class="modal-buttons">
+      <button class="btn" style="background:#28a745" onclick="guardarEntrada()">Guardar en la Nube</button>
+      <button class="btn" style="background:#718096" onclick="cerrar('modalForm')">Cancelar</button>
     </div>
+  </div>
+</div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+const WA = "17876747576";
+const ADMIN_PASS = "@1Joseortiz"; // cámbiala aquí cuando quieras
+const SIN_IMG = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="#eef1f5"/><text x="75" y="80" font-size="14" text-anchor="middle" fill="#99a">Sin foto</text></svg>');
+
+// Palabras que usa el filtro "Tipo de pieza" (se buscan en la descripción)
+const CATEGORIAS = {
+  "Relays": ["RELAY"], "Bobinas": ["BOBINA"], "Inyectores": ["INJECTOR"],
+  "Sensores": ["SENSOR", "TPS", "MAF", "MAP", "FLOWMETER", "CAM", "CRANK", "VVTI", "TIMING", "IDDLE", "SPEED", "KNOCK"],
+  "Alternador": ["ALTERNADOR"], "Compresor": ["COMPRESOR"], "Luces": ["BOMBILLA", "FOCOS"], "Ventilador": ["FAN"]
+};
+const MARCAS = ["TOYOTA", "HONDA", "HYUNDAI", "FORD", "NISSAN", "GM", "MAZDA", "SUBARU", "SUZUKI", "MIT"];
+
+firebase.initializeApp({
+  apiKey: "AIzaSyBPHmtSreGyEcYCmowf-WHWILlWVQUhFHc",
+  authDomain: "catalogo-mj.firebaseapp.com",
+  databaseURL: "https://catalogo-mj-default-rtdb.firebaseio.com",
+  projectId: "catalogo-mj",
+  storageBucket: "catalogo-mj.firebasestorage.app",
+  messagingSenderId: "749032896104",
+  appId: "1:749032896104:web:c009538bc8fb1cb4ed2ddd"
+});
+const refConectores = firebase.database().ref('conectores');
+
+let catalogo = [], tempImagenBase64 = "", carrito = {};
+let sel = { cat: "", pines: "", marca: "" };
+try { carrito = JSON.parse(localStorage.getItem("carritoMJ")) || {}; } catch (e) {}
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const wa = texto => "https://wa.me/" + WA + "?text=" + encodeURIComponent(texto);
+const desc = c => [c.pines, c.descripcion].filter(Boolean).join(" - ");
+
+const categoriasDe = c => { const t = (c.descripcion || "").toUpperCase();
+  return Object.keys(CATEGORIAS).filter(k => CATEGORIAS[k].some(w => new RegExp("\\b" + w + "\\b").test(t))); };
+const marcaDe = c => { const t = (c.descripcion || "").toUpperCase(); return MARCAS.filter(m => new RegExp("\\b" + m + "\\b").test(t)); };
+const pinesDe = c => { const n = (c.pines || "").match(/\d+/); return n ? n[0] : ""; };
+
+$('waTop').href = wa("Hola M & J Distributors, quiero consultar un conector.");
+
+refConectores.on('value', snap => {
+  const d = snap.val();
+  catalogo = d ? Object.values(d).sort((a, b) => (a.codigo || "").localeCompare(b.codigo || "", 'es', { numeric: true })) : [];
+  dibujarChips();
+  filtrar();
+});
+
+function dibujarChips() {
+  const grupo = (id, clave, lista) => {
+    $(id).innerHTML = ['Todos', ...lista].map(v =>
+      `<button class="chip ${(sel[clave] || 'Todos') === v ? 'on' : ''}" data-k="${clave}" data-v="${esc(v)}">${esc(v === 'Todos' ? v : (clave === 'pines' ? v + ' pines' : v))}</button>`).join('');
+  };
+  const cats = Object.keys(CATEGORIAS).filter(k => catalogo.some(c => categoriasDe(c).includes(k)));
+  const pins = [...new Set(catalogo.map(pinesDe).filter(Boolean))].sort((a, b) => a - b);
+  const marcas = MARCAS.filter(m => catalogo.some(c => marcaDe(c).includes(m)));
+  grupo('chipsCat', 'cat', cats); grupo('chipsPines', 'pines', pins); grupo('chipsMarca', 'marca', marcas);
+}
+
+document.addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (chip) { sel[chip.dataset.k] = chip.dataset.v === 'Todos' ? '' : chip.dataset.v; dibujarChips(); filtrar(); return; }
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const id = b.dataset.id, a = b.dataset.act;
+  if (a === 'wa') { const c = catalogo.find(x => x.id === id); if (c) window.open(wa(`Hola, me interesa el conector ${c.codigo} (${desc(c)}). ¿Lo tienen disponible?`), '_blank'); }
+  if (a === 'add') agregar(id);
+  if (a === 'mas') cambiar(id, 1);
+  if (a === 'menos') cambiar(id, -1);
+  if (a === 'edit') abrirModalEditar(id);
+  if (a === 'del') eliminarEntrada(id);
+});
+
+function filtrar() {
+  const t = $('searchInput').value.toLowerCase().trim();
+  const lista = catalogo.filter(c =>
+    (!t || [c.codigo, c.pines, c.descripcion].some(v => (v || "").toLowerCase().includes(t))) &&
+    (!sel.cat || categoriasDe(c).includes(sel.cat)) &&
+    (!sel.pines || pinesDe(c) === sel.pines) &&
+    (!sel.marca || marcaDe(c).includes(sel.marca)));
+  $('contador').textContent = `Mostrando ${lista.length} de ${catalogo.length} piezas`;
+  $('connectorGrid').innerHTML = lista.length ? lista.map(c => `
+    <div class="card">
+      <img loading="lazy" src="${esc(c.imagen && !c.imagen.includes('via.placeholder') ? c.imagen : SIN_IMG)}" alt="${esc(c.codigo)}">
+      <h3>${esc(c.codigo)}</h3>
+      <div class="pines">${esc(c.pines)}</div>
+      <div class="descripcion">${esc(c.descripcion) || 'Sin descripción'}</div>
+      ${c.precio ? `<div class="precio">${esc(c.precio)}</div>` : ''}
+      <div class="buy">
+        <button class="btn btn-wa" data-act="wa" data-id="${esc(c.id)}">Preguntar por WhatsApp</button>
+        <button class="btn btn-cart" data-act="add" data-id="${esc(c.id)}">+ Agregar al pedido</button>
+      </div>
+      <div class="actions">
+        <button class="btn btn-edit" data-act="edit" data-id="${esc(c.id)}">✏️ Editar</button>
+        <button class="btn btn-delete" data-act="del" data-id="${esc(c.id)}">🗑️ Borrar</button>
+      </div>
+    </div>`).join('') :
+    `<div class="vacio">No encontramos piezas con esos filtros.<br><a href="${wa('Hola, busco un conector y no lo encontré en el catálogo.')}" target="_blank" rel="noopener">Escríbenos por WhatsApp y te ayudamos</a></div>`;
+}
+
+function limpiar() { sel = { cat: "", pines: "", marca: "" }; $('searchInput').value = ""; dibujarChips(); filtrar(); }
+
+// ---------- Pedido (carrito) ----------
+function guardarCarrito() { try { localStorage.setItem("carritoMJ", JSON.stringify(carrito)); } catch (e) {} barra(); }
+function agregar(id) { carrito[id] = (carrito[id] || 0) + 1; guardarCarrito(); }
+function cambiar(id, d) { carrito[id] = (carrito[id] || 0) + d; if (carrito[id] <= 0) delete carrito[id]; guardarCarrito(); listaCarrito(); }
+function vaciarCarrito() { carrito = {}; guardarCarrito(); cerrar('modalCarrito'); }
+function items() { return Object.keys(carrito).map(id => ({ c: catalogo.find(x => x.id === id), n: carrito[id] })).filter(i => i.c); }
+function barra() {
+  const total = items().reduce((s, i) => s + i.n, 0);
+  $('barraPedido').style.display = total ? 'flex' : 'none';
+  $('barraTexto').textContent = total + (total === 1 ? ' pieza en tu pedido' : ' piezas en tu pedido');
+}
+function listaCarrito() {
+  const it = items();
+  $('listaCarrito').innerHTML = it.length ? it.map(({ c, n }) => `
+    <div class="linea"><span><b>${esc(c.codigo)}</b><br>${esc(desc(c))}</span>
+    <button data-act="menos" data-id="${esc(c.id)}" aria-label="Quitar uno">−</button><b>${n}</b>
+    <button data-act="mas" data-id="${esc(c.id)}" aria-label="Agregar uno">+</button></div>`).join('') : '<p>Tu pedido está vacío.</p>';
+  if (!it.length) cerrar('modalCarrito');
+}
+function abrirCarrito() { listaCarrito(); $('modalCarrito').style.display = 'flex'; }
+function enviarPedido() {
+  const it = items(); if (!it.length) return;
+  const lineas = it.map(({ c, n }) => `• ${n} x ${c.codigo} (${desc(c)})${c.precio ? ' - ' + c.precio : ''}`);
+  window.open(wa("Hola M & J Distributors, quiero hacer este pedido:\n" + lineas.join("\n") + "\n\n¿Me confirman disponibilidad y total? Gracias."), '_blank');
+}
+function cerrar(id) { $(id).style.display = 'none'; }
+
+// ---------- Administrador ----------
+function abrirModalNuevo() {
+  $('modalTitle').innerText = 'Añadir Plúg'; $('editId').value = '';
+  ['inputCodigo', 'inputPines', 'inputDescripcion', 'inputPrecio', 'inputFile'].forEach(i => $(i).value = '');
+  tempImagenBase64 = ''; $('imagePreview').style.display = 'none'; $('modalForm').style.display = 'flex';
+}
+function abrirModalEditar(id) {
+  const c = catalogo.find(x => x.id === id); if (!c) return;
+  $('modalTitle').innerText = 'Editar Plúg'; $('editId').value = c.id;
+  $('inputCodigo').value = c.codigo; $('inputPines').value = c.pines || '';
+  $('inputDescripcion').value = c.descripcion || ''; $('inputPrecio').value = c.precio || '';
+  tempImagenBase64 = c.imagen || '';
+  $('imagePreview').src = tempImagenBase64; $('imagePreview').style.display = tempImagenBase64 ? 'block' : 'none';
+  $('modalForm').style.display = 'flex';
+}
+function convertirImagen(ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => { tempImagenBase64 = e.target.result; $('imagePreview').src = tempImagenBase64; $('imagePreview').style.display = 'block'; };
+  r.readAsDataURL(f);
+}
+function guardarEntrada() {
+  const codigo = $('inputCodigo').value.trim();
+  if (!codigo) { alert("El campo 'Código' es obligatorio."); return; }
+  const id = $('editId').value || codigo.replace(/[^a-zA-Z0-9_-]/g, '_');
+  refConectores.child(id).set({
+    id, codigo, pines: $('inputPines').value.trim(), descripcion: $('inputDescripcion').value.trim(),
+    precio: $('inputPrecio').value.trim(), imagen: tempImagenBase64 || SIN_IMG
+  }).then(() => { alert("¡Guardado en la nube!"); cerrar('modalForm'); }).catch(err => alert("Error: " + err.message));
+}
+function eliminarEntrada(id) { if (confirm("¿Deseas eliminar este conector de la nube?")) refConectores.child(id).remove(); }
+function accesoAdmin() {
+  const p = prompt("Ingresa la contraseña de administración:");
+  if (p === ADMIN_PASS) { sessionStorage.setItem("adminAutenticado", "true"); document.body.classList.add('admin'); alert("¡Acceso concedido!"); }
+  else if (p !== null) alert("Contraseña incorrecta.");
+}
+if (sessionStorage.getItem("adminAutenticado") === "true") document.body.classList.add('admin');
+barra();
+</script>
 </body>
 </html>
