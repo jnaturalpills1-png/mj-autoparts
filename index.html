@@ -147,6 +147,7 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
       <div class="form-group"><label>Nombre:</label><input type="text" id="regNombre"></div>
       <div class="form-group"><label>Negocio:</label><input type="text" id="regNegocio"></div>
       <div class="form-group"><label>Teléfono (WhatsApp):</label><input type="tel" id="regTel" placeholder="787-000-0000"></div>
+      <div class="form-group"><label>Nº de registro de comerciante de PR o número patronal:</label><input type="text" id="regNumero" maxlength="12" inputmode="numeric" placeholder="9 números (obligatorio)"></div>
       <div class="modal-buttons"><button class="btn btn-wa" onclick="registrarCliente()">Registrarme</button></div>
       <p class="hint"><button class="link" onclick="mostrarRegistro(false)">Ya estoy registrado</button></p>
     </div>
@@ -366,13 +367,14 @@ function ingresarCliente() {
   }).catch(e => alert('Error: ' + e.message));
 }
 function registrarCliente() {
-  const nombre = $('regNombre').value.trim(), negocio = $('regNegocio').value.trim(), id = soloNum($('regTel').value);
+  const nombre = $('regNombre').value.trim(), negocio = $('regNegocio').value.trim(), id = soloNum($('regTel').value), registro = $('regNumero').value.replace(/[\s-]/g, '');
   if (!nombre || id.length < 10) { alert('Escribe tu nombre y tu teléfono completo (10 dígitos).'); return; }
+  if (!/^\d{9}$/.test(registro)) { alert('Tu número de registro de comerciante de PR o número patronal debe tener 9 números, sin letras.'); return; }
   refClientes.child(id).once('value').then(sn => {
     if (sn.val()) { alert('Ese número ya está registrado. Usa "Ya estoy registrado".'); return; }
-    return refClientes.child(id).set({ id, nombre, negocio, telefono: id, nivel: 0, fecha: new Date().toISOString() }).then(() => {
+    return refClientes.child(id).set({ id, nombre, negocio, registro, telefono: id, nivel: 0, fecha: new Date().toISOString() }).then(() => {
       cerrar('modalCliente'); alert('¡Registro enviado! Te avisaremos cuando sea aprobado.');
-      window.open(wa(`Hola M & J Distributors, me registré como cliente mayorista.\nNombre: ${nombre}\nNegocio: ${negocio || '-'}\nTeléfono: ${id}`), '_blank');
+      window.open(wa(`Hola M & J Distributors, me registré como cliente mayorista.\nNombre: ${nombre}\nNegocio: ${negocio || '-'}\nRegistro comerciante/patronal: ${registro}\nTeléfono: ${id}`), '_blank');
     });
   }).catch(e => alert('Error: ' + e.message));
 }
@@ -385,7 +387,7 @@ function abrirClientes() {
     const l = Object.values(sn.val() || {}).sort((a, b) => (a.nivel ? 1 : 0) - (b.nivel ? 1 : 0) || (a.nombre || '').localeCompare(b.nombre || ''));
     $('listaClientes').innerHTML = l.length ? l.map(c => `
       <div class="cli-row"><b>${esc(c.nombre)}</b> ${c.nivel ? '' : '<span class="pend">PENDIENTE</span>'}<br>
-      ${esc(c.negocio || '')} · ${esc(c.telefono)}
+      ${esc(c.negocio || '')} · ${esc(c.telefono)}<br>Registro: ${esc(c.registro || 'no indicado')}
       <select onchange="asignarNivel('${esc(c.id)}', this.value)">
         ${[0, 1, 2, 3].map(n => `<option value="${n}" ${+c.nivel === n ? 'selected' : ''}>${n ? 'Mayorista nivel ' + n : 'Sin acceso (pendiente)'}</option>`).join('')}
       </select>
