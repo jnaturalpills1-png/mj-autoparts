@@ -55,6 +55,13 @@ main { max-width: 1200px; margin: 0 auto; }
 .linea button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--borde); background: #fff; font-size: 16px; cursor: pointer; }
 footer { text-align: center; margin: 30px 0 10px; }
 footer button { background: none; border: none; color: #888; cursor: pointer; font-size: 12px; }
+.precio small{display:block;font-weight:normal;font-size:12px;color:#667}
+.top-btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-cli{background:#fff;color:var(--azul);border:2px solid var(--azul);padding:8px 14px;border-radius:24px;font-weight:bold;font-size:14px;cursor:pointer}
+.cli-row{padding:10px 0;border-bottom:1px solid var(--borde);font-size:14px}
+.cli-row select{margin-top:6px;padding:8px;width:100%}
+.pend{color:#e53e3e;font-weight:bold}
+.hint{font-size:13px;color:#667;margin:6px 0}
 </style>
 </head>
 <body>
@@ -63,11 +70,12 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
     <h1>Catálogo de Conectores y Accesorios</h1>
     <p class="subtitle">M & J Distributors</p>
   </div>
-  <a class="btn-wa-top" id="waTop" target="_blank" rel="noopener">Escríbenos por WhatsApp</a>
+  <div class="top-btns"><button class="btn-cli" id="btnCliente" onclick="abrirCliente()">Soy cliente mayorista</button><a class="btn-wa-top" id="waTop" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></div>
 </header>
 
 <main id="app">
   <button class="btn-add" onclick="abrirModalNuevo()">&#43; Añadir Nuevo Plúg</button>
+  <button class="btn-add" style="background:#003366" onclick="abrirClientes()">👥 Clientes mayoristas</button>
 
   <div class="search-container">
     <input type="search" id="searchInput" oninput="filtrar()" placeholder="Buscar por código (ej. 2837), descripción o pines...">
@@ -109,7 +117,10 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
     <div class="form-group"><label>Código:</label><input type="text" id="inputCodigo"></div>
     <div class="form-group"><label>Pines:</label><input type="text" id="inputPines" placeholder="Ej. 3 PINES"></div>
     <div class="form-group"><label>Descripción / Tipo:</label><input type="text" id="inputDescripcion" placeholder="Ej. CAM SENSOR TOYOTA"></div>
-    <div class="form-group"><label>Precio (opcional):</label><input type="text" id="inputPrecio" placeholder="Ej. $8.00"></div>
+    <div class="form-group"><label>Precio al detal (público):</label><input type="text" id="inputPrecio" placeholder="Ej. $8.00"></div>
+    <div class="form-group"><label>Mayorista nivel 1:</label><input type="text" id="inputP1" placeholder="Ej. $6.50"></div>
+    <div class="form-group"><label>Mayorista nivel 2:</label><input type="text" id="inputP2" placeholder="Ej. $6.00"></div>
+    <div class="form-group"><label>Mayorista nivel 3:</label><input type="text" id="inputP3" placeholder="Ej. $5.50"></div>
     <div class="form-group">
       <label>Imagen:</label>
       <input type="file" id="inputFile" accept="image/*" onchange="convertirImagen(event)">
@@ -119,6 +130,35 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
       <button class="btn" style="background:#28a745" onclick="guardarEntrada()">Guardar en la Nube</button>
       <button class="btn" style="background:#718096" onclick="cerrar('modalForm')">Cancelar</button>
     </div>
+  </div>
+</div>
+
+<div class="modal" id="modalCliente">
+  <div class="modal-content">
+    <h3 id="cliTitulo">Cliente mayorista</h3>
+    <div id="cliLogin">
+      <p class="hint">Ingresa con tu teléfono para ver tu precio mayorista.</p>
+      <div class="form-group"><label>Teléfono:</label><input type="tel" id="cliTelIn" placeholder="787-000-0000"></div>
+      <div class="modal-buttons"><button class="btn btn-wa" onclick="ingresarCliente()">Ingresar</button></div>
+      <p class="hint">¿No estás registrado? <button class="link" onclick="mostrarRegistro(true)">Regístrate aquí</button></p>
+    </div>
+    <div id="cliReg" style="display:none">
+      <p class="hint">Regístrate y te avisaremos cuando tu cuenta mayorista sea aprobada.</p>
+      <div class="form-group"><label>Nombre:</label><input type="text" id="regNombre"></div>
+      <div class="form-group"><label>Negocio:</label><input type="text" id="regNegocio"></div>
+      <div class="form-group"><label>Teléfono (WhatsApp):</label><input type="tel" id="regTel" placeholder="787-000-0000"></div>
+      <div class="modal-buttons"><button class="btn btn-wa" onclick="registrarCliente()">Registrarme</button></div>
+      <p class="hint"><button class="link" onclick="mostrarRegistro(false)">Ya estoy registrado</button></p>
+    </div>
+    <div class="modal-buttons"><button class="btn" style="background:#718096" onclick="cerrar('modalCliente')">Cerrar</button></div>
+  </div>
+</div>
+
+<div class="modal" id="modalClientes">
+  <div class="modal-content">
+    <h3>Clientes mayoristas</h3>
+    <div id="listaClientes"></div>
+    <div class="modal-buttons"><button class="btn" style="background:#718096" onclick="cerrar('modalClientes')">Cerrar</button></div>
   </div>
 </div>
 
@@ -147,6 +187,7 @@ firebase.initializeApp({
   appId: "1:749032896104:web:c009538bc8fb1cb4ed2ddd"
 });
 const refConectores = firebase.database().ref('conectores');
+const refClientes = firebase.database().ref('clientes');
 
 let catalogo = [], tempImagenBase64 = "", carrito = {};
 let sel = { cat: "", pines: "", marca: "" };
@@ -156,6 +197,11 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const wa = texto => "https://wa.me/" + WA + "?text=" + encodeURIComponent(texto);
 const desc = c => [c.pines, c.descripcion].filter(Boolean).join(" - ");
+let cliente = null; // cliente mayorista con sesión (nivel 1, 2 o 3)
+const verPrecio = c => { const n = cliente ? cliente.nivel : 0, m = n ? c['precioM' + n] : '';
+  return m ? { v: m, tag: 'mayorista nivel ' + n } : { v: c.precio, tag: 'detal' }; };
+const txtPrecio = c => { const p = verPrecio(c); return p.v ? ' - ' + p.v + ' (' + p.tag + ')' : ''; };
+const soloNum = s => String(s || "").replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
 
 const categoriasDe = c => { const t = (c.descripcion || "").toUpperCase();
   return Object.keys(CATEGORIAS).filter(k => CATEGORIAS[k].some(w => new RegExp("\\b" + w + "\\b").test(t))); };
@@ -188,7 +234,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const id = b.dataset.id, a = b.dataset.act;
-  if (a === 'wa') { const c = catalogo.find(x => x.id === id); if (c) window.open(wa(`Hola, me interesa el conector ${c.codigo} (${desc(c)}). ¿Lo tienen disponible?`), '_blank'); }
+  if (a === 'wa') { const c = catalogo.find(x => x.id === id); if (c) window.open(wa(`Hola, me interesa el conector ${c.codigo} (${desc(c)})${txtPrecio(c)}. ¿Lo tienen disponible?`), '_blank'); }
   if (a === 'add') agregar(id);
   if (a === 'mas') cambiar(id, 1);
   if (a === 'menos') cambiar(id, -1);
@@ -210,7 +256,7 @@ function filtrar() {
       <h3>${esc(c.codigo)}</h3>
       <div class="pines">${esc(c.pines)}</div>
       <div class="descripcion">${esc(c.descripcion) || 'Sin descripción'}</div>
-      ${c.precio ? `<div class="precio">${esc(c.precio)}</div>` : ''}
+      ${(p => p.v ? `<div class="precio">${esc(p.v)}<small>${p.tag === 'detal' ? 'Precio al detal' : 'Tu precio mayorista'}</small></div>` : '')(verPrecio(c))}
       <div class="buy">
         <button class="btn btn-wa" data-act="wa" data-id="${esc(c.id)}">Preguntar por WhatsApp</button>
         <button class="btn btn-cart" data-act="add" data-id="${esc(c.id)}">+ Agregar al pedido</button>
@@ -247,15 +293,15 @@ function listaCarrito() {
 function abrirCarrito() { listaCarrito(); $('modalCarrito').style.display = 'flex'; }
 function enviarPedido() {
   const it = items(); if (!it.length) return;
-  const lineas = it.map(({ c, n }) => `• ${n} x ${c.codigo} (${desc(c)})${c.precio ? ' - ' + c.precio : ''}`);
-  window.open(wa("Hola M & J Distributors, quiero hacer este pedido:\n" + lineas.join("\n") + "\n\n¿Me confirman disponibilidad y total? Gracias."), '_blank');
+  const lineas = it.map(({ c, n }) => `• ${n} x ${c.codigo} (${desc(c)})${txtPrecio(c)}`);
+  window.open(wa("Hola M & J Distributors, quiero hacer este pedido:\n" + (cliente ? "Cliente: " + cliente.nombre + " (mayorista nivel " + cliente.nivel + ")\n" : "") + lineas.join("\n") + "\n\n¿Me confirman disponibilidad y total? Gracias."), '_blank');
 }
 function cerrar(id) { $(id).style.display = 'none'; }
 
 // ---------- Administrador ----------
 function abrirModalNuevo() {
   $('modalTitle').innerText = 'Añadir Plúg'; $('editId').value = '';
-  ['inputCodigo', 'inputPines', 'inputDescripcion', 'inputPrecio', 'inputFile'].forEach(i => $(i).value = '');
+  ['inputCodigo', 'inputPines', 'inputDescripcion', 'inputPrecio', 'inputP1', 'inputP2', 'inputP3', 'inputFile'].forEach(i => $(i).value = '');
   tempImagenBase64 = ''; $('imagePreview').style.display = 'none'; $('modalForm').style.display = 'flex';
 }
 function abrirModalEditar(id) {
@@ -263,6 +309,7 @@ function abrirModalEditar(id) {
   $('modalTitle').innerText = 'Editar Plúg'; $('editId').value = c.id;
   $('inputCodigo').value = c.codigo; $('inputPines').value = c.pines || '';
   $('inputDescripcion').value = c.descripcion || ''; $('inputPrecio').value = c.precio || '';
+  $('inputP1').value = c.precioM1 || ''; $('inputP2').value = c.precioM2 || ''; $('inputP3').value = c.precioM3 || '';
   tempImagenBase64 = c.imagen || '';
   $('imagePreview').src = tempImagenBase64; $('imagePreview').style.display = tempImagenBase64 ? 'block' : 'none';
   $('modalForm').style.display = 'flex';
@@ -279,7 +326,7 @@ function guardarEntrada() {
   const id = $('editId').value || codigo.replace(/[^a-zA-Z0-9_-]/g, '_');
   refConectores.child(id).set({
     id, codigo, pines: $('inputPines').value.trim(), descripcion: $('inputDescripcion').value.trim(),
-    precio: $('inputPrecio').value.trim(), imagen: tempImagenBase64 || SIN_IMG
+    precio: $('inputPrecio').value.trim(), precioM1: $('inputP1').value.trim(), precioM2: $('inputP2').value.trim(), precioM3: $('inputP3').value.trim(), imagen: tempImagenBase64 || SIN_IMG
   }).then(() => { alert("¡Guardado en la nube!"); cerrar('modalForm'); }).catch(err => alert("Error: " + err.message));
 }
 function eliminarEntrada(id) { if (confirm("¿Deseas eliminar este conector de la nube?")) refConectores.child(id).remove(); }
@@ -290,6 +337,64 @@ function accesoAdmin() {
 }
 if (sessionStorage.getItem("adminAutenticado") === "true") document.body.classList.add('admin');
 barra();
+
+// ---------- Clientes mayoristas ----------
+function actualizarCliente() {
+  $('btnCliente').textContent = cliente ? '👤 ' + cliente.nombre + ' · Mayorista ' + cliente.nivel + ' (salir)' : 'Soy cliente mayorista';
+  filtrar();
+}
+function mostrarRegistro(reg) {
+  $('cliLogin').style.display = reg ? 'none' : 'block'; $('cliReg').style.display = reg ? 'block' : 'none';
+  $('cliTitulo').textContent = reg ? 'Registro mayorista' : 'Cliente mayorista';
+}
+function abrirCliente() {
+  if (cliente) {
+    if (confirm('¿Cerrar la sesión de ' + cliente.nombre + '?')) { cliente = null; try { localStorage.removeItem('clienteMJ'); } catch (e) {} actualizarCliente(); }
+    return;
+  }
+  mostrarRegistro(false); $('modalCliente').style.display = 'flex';
+}
+function ingresarCliente() {
+  const id = soloNum($('cliTelIn').value);
+  if (id.length < 10) { alert('Escribe tu teléfono completo (10 dígitos).'); return; }
+  refClientes.child(id).once('value').then(sn => {
+    const d = sn.val();
+    if (!d) { alert('Ese número no está registrado. Regístrate primero.'); return; }
+    if (!d.nivel) { alert('Tu registro está pendiente de aprobación. Te avisaremos por WhatsApp.'); return; }
+    cliente = d; try { localStorage.setItem('clienteMJ', id); } catch (e) {}
+    cerrar('modalCliente'); actualizarCliente();
+  }).catch(e => alert('Error: ' + e.message));
+}
+function registrarCliente() {
+  const nombre = $('regNombre').value.trim(), negocio = $('regNegocio').value.trim(), id = soloNum($('regTel').value);
+  if (!nombre || id.length < 10) { alert('Escribe tu nombre y tu teléfono completo (10 dígitos).'); return; }
+  refClientes.child(id).once('value').then(sn => {
+    if (sn.val()) { alert('Ese número ya está registrado. Usa "Ya estoy registrado".'); return; }
+    return refClientes.child(id).set({ id, nombre, negocio, telefono: id, nivel: 0, fecha: new Date().toISOString() }).then(() => {
+      cerrar('modalCliente'); alert('¡Registro enviado! Te avisaremos cuando sea aprobado.');
+      window.open(wa(`Hola M & J Distributors, me registré como cliente mayorista.\nNombre: ${nombre}\nNegocio: ${negocio || '-'}\nTeléfono: ${id}`), '_blank');
+    });
+  }).catch(e => alert('Error: ' + e.message));
+}
+try { const sid = localStorage.getItem('clienteMJ');
+  if (sid) refClientes.child(sid).once('value').then(sn => { const d = sn.val(); if (d && d.nivel) { cliente = d; actualizarCliente(); } }); } catch (e) {}
+
+// Administrador: aprobar clientes y asignar nivel
+function abrirClientes() {
+  refClientes.once('value').then(sn => {
+    const l = Object.values(sn.val() || {}).sort((a, b) => (a.nivel ? 1 : 0) - (b.nivel ? 1 : 0) || (a.nombre || '').localeCompare(b.nombre || ''));
+    $('listaClientes').innerHTML = l.length ? l.map(c => `
+      <div class="cli-row"><b>${esc(c.nombre)}</b> ${c.nivel ? '' : '<span class="pend">PENDIENTE</span>'}<br>
+      ${esc(c.negocio || '')} · ${esc(c.telefono)}
+      <select onchange="asignarNivel('${esc(c.id)}', this.value)">
+        ${[0, 1, 2, 3].map(n => `<option value="${n}" ${+c.nivel === n ? 'selected' : ''}>${n ? 'Mayorista nivel ' + n : 'Sin acceso (pendiente)'}</option>`).join('')}
+      </select>
+      <button class="link" onclick="borrarCliente('${esc(c.id)}')">Eliminar</button></div>`).join('') : '<p>Aún no hay clientes registrados.</p>';
+    $('modalClientes').style.display = 'flex';
+  }).catch(e => alert('Error: ' + e.message));
+}
+function asignarNivel(id, n) { refClientes.child(id).update({ nivel: +n }).then(abrirClientes).catch(e => alert('Error: ' + e.message)); }
+function borrarCliente(id) { if (confirm('¿Eliminar este cliente?')) refClientes.child(id).remove().then(abrirClientes); }
 </script>
 </body>
 </html>
