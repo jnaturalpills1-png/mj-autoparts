@@ -62,6 +62,14 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
 .cli-row select{margin-top:6px;padding:8px;width:100%}
 .pend{color:#e53e3e;font-weight:bold}
 .hint{font-size:13px;color:#667;margin:6px 0}
+.modal-wide{max-width:820px}
+#tblPrecios{width:100%;border-collapse:collapse;font-size:14px}
+#tblPrecios th{position:sticky;top:0;background:#fff;text-align:left;padding:6px}
+#tblPrecios td{padding:3px}
+#tblPrecios input{width:100%;padding:7px;border:1px solid var(--borde);border-radius:4px}
+.desc-row{display:flex;gap:6px;align-items:end;flex-wrap:wrap;margin:8px 0}
+.desc-row label{font-size:12px;font-weight:bold}
+.desc-row input{width:64px;padding:7px;border:1px solid var(--borde);border-radius:4px}
 </style>
 </head>
 <body>
@@ -76,6 +84,7 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
 <main id="app">
   <button class="btn-add" onclick="abrirModalNuevo()">&#43; Añadir Nuevo Plúg</button>
   <button class="btn-add" style="background:#003366" onclick="abrirClientes()">👥 Clientes mayoristas</button>
+  <button class="btn-add" style="background:#e67e22" onclick="abrirPrecios()">⚡ Editar precios rápido</button>
 
   <div class="search-container">
     <input type="search" id="searchInput" oninput="filtrar()" placeholder="Buscar por código (ej. 2837), descripción o pines...">
@@ -160,6 +169,25 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
     <h3>Clientes mayoristas</h3>
     <div id="listaClientes"></div>
     <div class="modal-buttons"><button class="btn" style="background:#718096" onclick="cerrar('modalClientes')">Cerrar</button></div>
+  </div>
+</div>
+
+<div class="modal" id="modalPrecios">
+  <div class="modal-content modal-wide">
+    <h3>Editar precios rápido</h3>
+    <p class="hint">Escribe y baja con Enter. También puedes copiar columnas de Excel y pegarlas en una casilla.</p>
+    <div class="desc-row">
+      <div><label>Desc. M1 %</label><br><input type="number" id="dM1" value="10"></div>
+      <div><label>Desc. M2 %</label><br><input type="number" id="dM2" value="15"></div>
+      <div><label>Desc. M3 %</label><br><input type="number" id="dM3" value="20"></div>
+      <button class="btn" style="background:#003366" onclick="calcMayoristas()">Calcular mayoristas (solo vacías)</button>
+    </div>
+    <input type="search" id="pfilt" oninput="tablaPrecios()" placeholder="Filtrar por código o descripción" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid var(--borde);border-radius:6px">
+    <div style="overflow:auto;max-height:48vh"><table id="tblPrecios"></table></div>
+    <div class="modal-buttons">
+      <button class="btn" style="background:#28a745" onclick="guardarPrecios()">Guardar todos los cambios</button>
+      <button class="btn" style="background:#718096" onclick="cerrar('modalPrecios')">Cerrar</button>
+    </div>
   </div>
 </div>
 
@@ -397,6 +425,60 @@ function abrirClientes() {
 }
 function asignarNivel(id, n) { refClientes.child(id).update({ nivel: +n }).then(abrirClientes).catch(e => alert('Error: ' + e.message)); }
 function borrarCliente(id) { if (confirm('¿Eliminar este cliente?')) refClientes.child(id).remove().then(abrirClientes); }
+
+// ---------- Editor rápido de precios ----------
+let edPrecios = {};
+const CAMPOS_P = ['precio', 'precioM1', 'precioM2', 'precioM3'];
+const valP = (c, k) => (edPrecios[c.id] && k in edPrecios[c.id]) ? edPrecios[c.id][k] : (c[k] || '');
+function setP(id, k, v) { (edPrecios[id] = edPrecios[id] || {})[k] = v; }
+function abrirPrecios() { $('pfilt').value = ''; tablaPrecios(); $('modalPrecios').style.display = 'flex'; }
+function tablaPrecios() {
+  const t = $('pfilt').value.toLowerCase().trim();
+  $('tblPrecios').innerHTML = '<tr><th>Código</th><th>Detal</th><th>May. 1</th><th>May. 2</th><th>May. 3</th></tr>' +
+    catalogo.filter(c => !t || (c.codigo || '').toLowerCase().includes(t) || (c.descripcion || '').toLowerCase().includes(t))
+      .map(c => `<tr><td><b>${esc(c.codigo)}</b></td>` +
+        CAMPOS_P.map(k => `<td><input data-id="${esc(c.id)}" data-k="${k}" value="${esc(valP(c, k))}"></td>`).join('') + '</tr>').join('');
+}
+$('tblPrecios').addEventListener('input', e => { const i = e.target; if (i.dataset.id) setP(i.dataset.id, i.dataset.k, i.value); });
+$('tblPrecios').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.dataset.id) return;
+  e.preventDefault();
+  const tr = e.target.closest('tr'), col = [...tr.querySelectorAll('input')].indexOf(e.target);
+  const sig = tr.nextElementSibling; if (sig) { const n = sig.querySelectorAll('input')[col]; n.focus(); n.select(); }
+});
+$('tblPrecios').addEventListener('paste', e => {
+  const i = e.target; if (!i.dataset.id) return;
+  const txt = (e.clipboardData || window.clipboardData).getData('text');
+  if (!/[\t\n]/.test(txt)) return; // pegado normal de una sola casilla
+  e.preventDefault();
+  const filas = txt.replace(/\r/g, '').split('\n'); if (filas[filas.length - 1] === '') filas.pop();
+  const trs = [...$('tblPrecios').querySelectorAll('tr')], r0 = trs.indexOf(i.closest('tr')),
+        c0 = [...i.closest('tr').querySelectorAll('input')].indexOf(i);
+  filas.forEach((f, a) => f.split('\t').forEach((v, b) => {
+    const tr = trs[r0 + a]; if (!tr) return;
+    const inp = tr.querySelectorAll('input')[c0 + b]; if (!inp) return;
+    inp.value = v.trim(); setP(inp.dataset.id, inp.dataset.k, inp.value);
+  }));
+});
+function calcMayoristas() {
+  catalogo.forEach(c => {
+    const base = parseFloat(String(valP(c, 'precio')).replace(/[^0-9.]/g, ''));
+    if (!isFinite(base)) return;
+    [1, 2, 3].forEach(n => {
+      if (String(valP(c, 'precioM' + n)).trim()) return; // no pisa lo que ya tienes
+      setP(c.id, 'precioM' + n, '$' + (base * (1 - (+$('dM' + n).value || 0) / 100)).toFixed(2));
+    });
+  });
+  tablaPrecios();
+}
+function guardarPrecios() {
+  const up = {};
+  Object.keys(edPrecios).forEach(id => Object.keys(edPrecios[id]).forEach(k => up['conectores/' + id + '/' + k] = String(edPrecios[id][k]).trim()));
+  if (!Object.keys(up).length) { alert('No hay cambios para guardar.'); return; }
+  firebase.database().ref().update(up)
+    .then(() => { edPrecios = {}; alert('¡Precios guardados!'); cerrar('modalPrecios'); })
+    .catch(err => alert('Error: ' + err.message));
+}
 </script>
 </body>
 </html>
