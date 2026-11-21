@@ -124,6 +124,9 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
 .inv-log{font-size:14px;margin:6px 0;min-height:22px}
 .inv-log div{padding:2px 0;border-bottom:1px dashed var(--borde)}
 #camReader{width:100%;max-width:420px;margin:8px auto;display:none}
+.rep-tabs{display:flex;gap:6px;margin:6px 0 10px;flex-wrap:wrap}.rep-tabs button{padding:8px 12px;border:1px solid #cbd5e0;background:#fff;border-radius:6px;font-weight:bold;cursor:pointer}.rep-tabs button.on{background:#003366;color:#fff;border-color:#003366}
+.rep-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:8px 0}.rep-cards div{background:#f1f5f9;border-radius:8px;padding:8px 10px}.rep-cards small{display:block;color:#555}.rep-cards b{font-size:18px}
+.rep-t{width:100%;border-collapse:collapse;font-size:13px;margin:4px 0 10px}.rep-t th,.rep-t td{border-bottom:1px solid #e2e8f0;padding:5px 6px;text-align:left}#repCuerpo .inv-bar input,#repCuerpo .inv-bar select{width:auto!important;flex:0 0 auto}.rep-bk{border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin:8px 0}
 </style>
 </head>
 <body>
@@ -147,6 +150,9 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
   <button class="btn-add" style="background:#6b46c1" onclick="abrirEtiquetas()">🏷️ Imprimir etiquetas</button>
   <button class="btn-add" style="background:#003366" onclick="abrirPedidos()">🧾 Pedidos</button>
   <button class="btn-add" style="background:#2f855a" onclick="abrirInventario()">📦 Inventario</button>
+  <button class="btn-add" style="background:#b7791f" onclick="abrirReportes('ventas')">📊 Ventas y reportes</button>
+  <button class="btn-add" style="background:#c0392b" onclick="abrirReportes('cobrar')">💵 Por cobrar</button>
+  <button class="btn-add" style="background:#4a5568" onclick="abrirReportes('respaldo')">💾 Respaldo / Excel</button>
   <div class="alerta-inv" id="alertaInv" onclick="abrirInventario(true)"></div>
 
   <div class="search-container">
@@ -161,7 +167,7 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
   <div class="grid-container" id="connectorGrid"></div>
 </main>
 
-<footer><button onclick="accesoAdmin()">🔑 Admin</button><br><small style="color:#999">Versión: inventario + código de barras (21-nov-2026)</small></footer>
+<footer><button onclick="accesoAdmin()">🔑 Admin</button><br><small style="color:#999">Versión: reportes + cobros + respaldo (21-nov-2026)</small></footer>
 
 <div class="barra-pedido" id="barraPedido">
   <span id="barraTexto"></span>
@@ -257,9 +263,23 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
 </div>
 <div id="toast"></div>
 
+<div class="modal" id="modalRep">
+  <div class="modal-content modal-wide">
+    <h3>📊 Ventas, cobros y respaldo</h3>
+    <div class="rep-tabs"><button id="repT_ventas" onclick="repTab('ventas')">Ventas</button><button id="repT_cobrar" onclick="repTab('cobrar')">Por cobrar</button><button id="repT_respaldo" onclick="repTab('respaldo')">Respaldo / Excel</button></div>
+    <div class="inv-bar" id="repFiltros">
+      <select id="repRango" onchange="repTab('ventas')"><option value="hoy">Hoy</option><option value="semana">Últimos 7 días</option><option value="mes" selected>Este mes</option><option value="mespas">Mes pasado</option><option value="anio">Este año</option><option value="todo">Todo</option><option value="rango">Escoger fechas…</option></select>
+      <span id="repDesdeHasta" style="display:none">Del <input type="date" id="repDesde" onchange="repTab('ventas')"> al <input type="date" id="repHasta" onchange="repTab('ventas')"></span>
+    </div>
+    <div id="repCuerpo" style="overflow:auto;max-height:58vh"></div>
+    <div class="modal-buttons"><button class="btn" style="background:#718096" onclick="cerrar('modalRep')">Cerrar</button></div>
+  </div>
+</div>
+
 <div class="modal" id="modalPedidos">
   <div class="modal-content">
     <h3>Pedidos recibidos</h3>
+    <div class="hint" style="margin:4px 0 8px">Último S.O. No. usado: <input type="number" id="ultimoSO" min="0" style="width:90px;padding:6px" onchange="guardarUltimoSO(this.value)"> <small>(el próximo pedido que confirmes seguirá desde ahí)</small></div>
     <div id="listaPedidos"></div>
     <div class="modal-buttons"><button class="btn" style="background:#718096" onclick="cerrar('modalPedidos')">Cerrar</button></div>
   </div>
@@ -267,7 +287,7 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
 
 <div class="modal" id="modalRecibo">
   <div class="modal-content" style="max-width:760px">
-    <label style="font-size:14px;display:block;margin-bottom:8px">Formato: <select id="reciboFmt" style="padding:7px" onchange="try{localStorage.setItem('fmtReciboMJ',this.value)}catch(e){};verRecibo(reciboActual)"><option value="carta">Hoja (carta)</option><option value="ticket">Ticket (80 mm)</option></select></label>
+    <label style="font-size:14px;display:block;margin-bottom:8px">Formato: <select id="reciboFmt" style="padding:7px" onchange="try{localStorage.setItem('fmtReciboMJ',this.value)}catch(e){};verRecibo(reciboActual)"><option value="carta">Hoja carta (Sales Order)</option><option value="ticket">Ticket (80 mm)</option></select></label>
     <div id="reciboCont" style="overflow:auto;border:1px solid var(--borde)"></div>
     <div class="modal-buttons"><button class="btn btn-wa" onclick="imprimirRecibo()">Imprimir / PDF</button><button class="btn" style="background:#003366" onclick="compartirRecibo()">Compartir</button></div>
     <div class="modal-buttons"><button class="btn" style="background:#718096" onclick="cerrar('modalRecibo')">Cerrar</button></div>
@@ -727,7 +747,8 @@ function confirmarVenta(i) {
   if (!confirm('¿Confirmar la venta del pedido ' + p.num + '?\nSe descontará del inventario:\n' + L.map(x => '• ' + x.l.n + ' x ' + x.l.codigo + (x.c && estadoInv(x.c.id) === null ? ' (sin existencia contada: no se descuenta)' : '')).join('\n') + (faltan ? '\n\n(' + faltan + ' pieza(s) ya no están en el catálogo y se omiten)' : ''))) return;
   return firebase.database().ref('pedidos/' + p._k + '/vendido').transaction(v => v ? undefined : true).then(r => {
     if (!r.committed) { alert('Este pedido ya estaba confirmado.'); return; }
-    return Promise.all(L.filter(x => x.c && estadoInv(x.c.id) !== null).map(x => moverStock(x.c.id, -(+x.l.n || 0), 'salida', 'pedido ' + p.num, { pedido: p.num }))).then(() => {
+    return firebase.database().ref('config/ultimoSO').transaction(v => (+v || 0) + 1).then(rs => refRoot.child('pedidos/' + p._k + '/so').set(+rs.snapshot.val()))
+      .then(() => Promise.all(L.filter(x => x.c && estadoInv(x.c.id) !== null).map(x => moverStock(x.c.id, -(+x.l.n || 0), 'salida', 'pedido ' + p.num, { pedido: p.num })))).then(() => {
       refRoot.child('pedidos/' + p._k + '/fechaVenta').set(new Date().toISOString());
       const bajos = L.filter(x => x.c && ['low', 'out'].includes(estadoInv(x.c.id))).map(x => x.c.codigo);
       toast('✔ Venta confirmada, inventario actualizado.' + (sinConteo ? ' (' + sinConteo + ' pieza(s) sin existencia contada no se descontaron)' : '') + (bajos.length ? ' ⚠️ Poco inventario: ' + bajos.join(', ') : ''));
@@ -835,40 +856,56 @@ function textoPedido(p) {
     '\n\n¿Me confirman disponibilidad y total? Gracias.';
 }
 const fmtRecibo = () => { const e = $('reciboFmt'); return e ? e.value : 'carta'; };
+const n2 = v => (+v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fechaCorta = iso => { try { const d = new Date(iso); return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear(); } catch (e) { return ''; } };
+// Datos del negocio que salen en el recibo (edítalos aquí si cambian)
+const NEG = { nombre: 'M&amp;J Distributors Inc', lineas: ['Hc 01-Box 2617', 'PR 00707', 'R-0066720-0013', '7874440533'], email: 'jnaturalpills1@gmail.com' };
 function htmlRecibo(p, fmt) {
   fmt = fmt || fmtRecibo();
-  const c = p.cliente, vend = !!p.vendido, titulo = vend ? 'RECIBO DE VENTA' : 'PEDIDO', numLbl = vend ? 'RECIBO No.' : 'PEDIDO No.';
-  const pie = vend ? 'Gracias por su compra.' : 'Pedido sujeto a confirmación de disponibilidad. Gracias por preferirnos.';
-  const clienteTxt = c ? esc(c.nombre) + (c.negocio ? '<br>' + esc(c.negocio) : '') + (c.telefono ? '<br>Tel: ' + esc(c.telefono) : '') + '<br>Cliente mayorista nivel ' + esc(c.nivel) : 'Cliente al detal';
-  const sinP = p.sinPrecio ? `<div style="font-size:11px;color:#b00;text-align:right;margin-top:4px">${p.sinPrecio} pieza(s) sin precio: no incluidas en el total.</div>` : '';
+  const c = p.cliente, num = p.so != null ? p.so : p.num;
+  const quien = c ? esc(c.nombre) + (c.negocio ? '<br>' + esc(c.negocio) : '') + (c.telefono ? '<br>' + esc(c.telefono) : '') : 'Cliente al detal';
+  const nota = p.sinPrecio ? p.sinPrecio + ' pieza(s) sin precio (consultar): no incluidas en el total.' : '';
   if (fmt === 'ticket') {
     const sep = '<div style="border-top:1px dashed #000;margin:7px 0"></div>';
     const fila = (a, b, st) => `<div style="display:flex;justify-content:space-between;${st || ''}"><span>${a}</span><span>${b}</span></div>`;
-    const L = (p.lineas || []).map(l => `<div style="margin-top:5px"><div><b>${esc(l.codigo)}</b> ${esc(l.desc)}</div>${fila(l.n + ' x ' + (l.pu == null ? 'consultar' : esc(l.precio)), l.sub == null ? '-' : money(l.sub))}</div>`).join('');
+    const L = (p.lineas || []).map(l => `<div style="margin-top:5px"><div><b>${esc(l.codigo)}</b> ${esc(l.desc)}</div>${fila(l.n + ' x ' + (l.pu == null ? 'consultar' : n2(l.pu)), l.sub == null ? '-' : n2(l.sub))}</div>`).join('');
     return `<div style="font-family:'Courier New',Courier,monospace;color:#000;background:#fff;width:72mm;max-width:100%;margin:0 auto;padding:6px;font-size:12px;line-height:1.3">
-      <div style="text-align:center"><b style="font-size:15px">M &amp; J DISTRIBUTORS</b><br>Since 2004<br>WhatsApp 787-674-7576</div>${sep}
-      <div style="text-align:center"><b>${titulo}</b></div>
-      <div>${numLbl} ${esc(p.num)}<br>${esc(fechaTxt(p.fecha))}</div>
-      <div style="margin-top:4px">${clienteTxt}</div>${sep}${L}${sep}
-      ${p.ivuPct > 0 ? fila('Subtotal', money(p.subtotal)) + fila('IVU (' + esc(p.ivuPct) + '%)', money(p.ivu)) : ''}
-      ${fila('TOTAL', money(p.total), 'font-size:15px;font-weight:bold;margin-top:3px')}${sinP}${sep}
-      <div style="text-align:center">${pie}</div></div>`;
+      <div style="text-align:center"><b style="font-size:14px">${NEG.nombre}</b><br>${NEG.lineas.join('<br>')}</div>${sep}
+      <div style="text-align:center"><b>SALES ORDER</b></div>
+      <div>S.O. No. ${esc(num)}<br>${esc(fechaCorta(p.fecha))}</div>
+      <div style="margin-top:4px">${quien}</div>${sep}${L}${sep}
+      ${fila('IVU ' + n2(p.ivuPct) + '%', n2(p.ivu))}
+      ${fila('TOTAL', '$' + n2(p.total), 'font-size:15px;font-weight:bold;margin-top:3px')}
+      ${nota ? `<div style="font-size:11px;color:#b00;margin-top:4px">${nota}</div>` : ''}${sep}
+      <div style="text-align:center">${p.vendido ? 'Gracias por su compra.' : 'Sujeto a disponibilidad. Gracias.'}</div>
+      <div style="text-align:center;font-size:11px">${NEG.email}</div></div>`;
   }
-  const filas = (p.lineas || []).map(l => `<tr style="border-bottom:1px solid #d9d9d9"><td style="padding:7px 8px;vertical-align:top;white-space:nowrap"><b>${esc(l.codigo)}</b></td><td style="padding:7px 8px;vertical-align:top">${esc(l.desc)}</td><td style="padding:7px 8px;text-align:center;vertical-align:top">${l.n}</td><td style="padding:7px 8px;text-align:right;vertical-align:top;white-space:nowrap">${l.pu == null ? 'consultar' : esc(l.precio)}</td><td style="padding:7px 8px;text-align:right;vertical-align:top;white-space:nowrap">${l.sub == null ? '-' : money(l.sub)}</td></tr>`).join('');
-  const tot = (a, b) => `<tr><td style="padding:4px 8px;text-align:right">${a}</td><td style="padding:4px 8px;text-align:right;width:110px">${b}</td></tr>`;
-  const th = 'border:1px solid #999;padding:4px 14px;background:#eef2f7';
-  return `<div style="font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff;padding:20px;min-width:560px;font-size:13px">
+  // ---- Hoja carta: mismo formato que el "Sales Order" de QuickBooks ----
+  const SER = "font-family:'Times New Roman',Times,'Liberation Serif',serif", SAN = "font-family:Arial,Helvetica,'Liberation Sans',sans-serif";
+  const td = 'border-right:1px solid #000;padding:1px 5px;vertical-align:top;font-size:13px;line-height:1.25';
+  const filas = (p.lineas || []).map((l, i) => `<tr style="${i % 2 ? 'background:#e6e6e6' : ''}"><td style="${td}">${esc(l.codigo)}</td><td style="${td}">${esc(l.desc)}</td><td style="${td};text-align:right">${l.n}</td><td style="${td};text-align:right">${l.pu == null ? 'consultar' : n2(l.pu)}</td><td style="${td};text-align:right;border-right:0">${l.sub == null ? '' : n2(l.sub)}</td></tr>`).join('');
+  const th = 'border-right:1px solid #000;border-bottom:2px solid #000;padding:9px 6px;font-weight:normal;font-size:14px;text-align:center';
+  return `<div style="${SER};color:#000;background:#fff;width:100%;min-width:640px;max-width:816px;margin:0 auto;padding:22px 26px 18px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
-      <div><div style="font-size:22px;font-weight:bold;color:#003366">M &amp; J Distributors</div><div style="font-size:12px;color:#444;line-height:1.5;margin-top:2px">Since 2004<br>Conectores y accesorios para autos<br>WhatsApp 787-674-7576</div></div>
-      <div style="text-align:right"><div style="font-size:24px;font-weight:bold;color:#003366;letter-spacing:.5px">${titulo}</div>
-        <table style="margin-left:auto;margin-top:6px;border-collapse:collapse;font-size:12px"><tr><th style="${th}">FECHA</th><th style="${th}">${numLbl}</th></tr><tr><td style="border:1px solid #999;padding:5px 14px;text-align:center">${esc(fechaTxt(p.fecha))}</td><td style="border:1px solid #999;padding:5px 14px;text-align:center">${esc(p.num)}</td></tr></table></div>
+      <div style="font-size:18px;line-height:1.38">${NEG.nombre}<br>${NEG.lineas.join('<br>')}</div>
+      <div>
+        <div style="${SAN};font-size:34px;font-weight:bold;text-align:right;line-height:1.1">Sales Order</div>
+        <table style="border-collapse:collapse;margin-top:12px;margin-left:auto;border:2px solid #000">
+          <tr><td style="${SAN};border-right:1px solid #000;border-bottom:1px solid #000;padding:10px 26px;font-size:14px;text-align:center">Date</td><td style="${SAN};border-bottom:1px solid #000;padding:10px 26px;font-size:14px;text-align:center">S.O. No.</td></tr>
+          <tr><td style="border-right:1px solid #000;padding:10px 12px;font-size:13px;text-align:center">${esc(fechaCorta(p.fecha))}</td><td style="padding:10px 12px;font-size:13px;text-align:center">${esc(num)}</td></tr></table>
+      </div>
     </div>
-    <div style="border:1px solid #999;margin-top:16px;width:55%"><div style="background:#eef2f7;padding:4px 8px;font-weight:bold;font-size:12px;border-bottom:1px solid #999">VENDIDO A</div><div style="padding:6px 8px;line-height:1.5">${clienteTxt}</div></div>
-    <table style="width:100%;border-collapse:collapse;margin-top:16px"><thead><tr style="background:#003366;color:#fff;font-size:12px;text-align:left"><th style="padding:7px 8px">ARTÍCULO</th><th style="padding:7px 8px">DESCRIPCIÓN</th><th style="padding:7px 8px;text-align:center">CANT.</th><th style="padding:7px 8px;text-align:right">PRECIO</th><th style="padding:7px 8px;text-align:right">IMPORTE</th></tr></thead><tbody>${filas}</tbody></table>
-    <table style="margin-left:auto;margin-top:10px;border-collapse:collapse">${p.ivuPct > 0 ? tot('Subtotal', money(p.subtotal)) + tot('IVU (' + esc(p.ivuPct) + '%)', money(p.ivu)) : ''}
-      <tr><td style="padding:8px;text-align:right;font-weight:bold;font-size:15px;border-top:2px solid #003366">TOTAL</td><td style="padding:8px;text-align:right;font-weight:bold;font-size:15px;border-top:2px solid #003366;background:#eef2f7">${money(p.total)}</td></tr></table>
-    ${sinP}
-    <div style="text-align:center;margin-top:22px;font-size:13px;color:#003366;font-weight:bold">${pie}</div></div>`;
+    <div style="border:2px solid #000;width:46%;margin:26px 0 0 5%"><div style="${SAN};font-size:14px;padding:8px 20px;border-bottom:2px solid #000">Name / Address</div><div style="font-size:13px;padding:5px 6px;min-height:96px;line-height:1.25">${quien}</div></div>
+    <table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-top:56px;height:470px">
+      <thead><tr style="background:#e6e6e6;${SAN}"><th style="${th};width:15%">Item</th><th style="${th};width:40%">Description</th><th style="${th};width:15%">Ordered</th><th style="${th};width:15%">Rate</th><th style="${th};width:15%;border-right:0">Amount</th></tr></thead>
+      <tbody>${filas}<tr><td style="${td}"></td><td style="${td}">IVU</td><td style="${td}"></td><td style="${td};text-align:right">${n2(p.ivuPct)}%</td><td style="${td};text-align:right;border-right:0">${n2(p.ivu)}</td></tr>
+      <tr style="height:100%"><td style="border-right:1px solid #000"></td><td style="border-right:1px solid #000"></td><td style="border-right:1px solid #000"></td><td style="border-right:1px solid #000"></td><td></td></tr></tbody></table>
+    <table style="width:100%;border-collapse:collapse;margin-top:-2px"><tr>
+      <td style="width:63%;border:2px solid #000;padding:6px 10px;font-size:11px;color:#b00;vertical-align:top">${nota}</td>
+      <td style="border:2px solid #000;padding:8px 16px;height:52px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><span style="${SAN};font-size:26px;font-weight:bold;line-height:1.3">Total</span><span style="font-size:13px">$${n2(p.total)}</span></div></td></tr></table>
+    <table style="margin-left:34%;width:29%;border-collapse:collapse;margin-top:-2px;border:2px solid #000;border-top:0"><tr><td style="${SAN};font-size:14px;text-align:center;padding:9px 6px;border-bottom:2px solid #000">E-mail</td></tr><tr><td style="font-size:13px;text-align:center;padding:9px 6px">${NEG.email}</td></tr></table>
+    ${p.vendido ? '' : '<div style="font-size:11px;color:#444;margin-top:10px;text-align:center">Pedido sujeto a confirmación de disponibilidad.</div>'}
+  </div>`;
 }
 function verRecibo(p) { if (!p) return; reciboActual = p; $('reciboCont').innerHTML = htmlRecibo(p); $('modalRecibo').style.display = 'flex'; }
 try { const f = localStorage.getItem('fmtReciboMJ'); if (f) $('reciboFmt').value = f; } catch (e) {}
@@ -885,7 +922,7 @@ async function compartirRecibo() {
   let tmp = null;
   try {
     if (!window.html2canvas) await new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
-    tmp = document.createElement('div'); tmp.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;width:' + (fmtRecibo() === 'ticket' ? '320px' : '640px'); tmp.innerHTML = htmlRecibo(p); document.body.appendChild(tmp);
+    tmp = document.createElement('div'); tmp.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;width:' + (fmtRecibo() === 'ticket' ? '320px' : '816px'); tmp.innerHTML = htmlRecibo(p); document.body.appendChild(tmp);
     const cv = await html2canvas(tmp, { backgroundColor: '#ffffff', scale: 2 });
     const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
     const file = new File([blob], 'recibo-' + p.num + '.png', { type: 'image/png' });
@@ -897,20 +934,128 @@ async function compartirRecibo() {
     alert('No se pudo crear la imagen. Usa "Imprimir / PDF" o envía el pedido por WhatsApp.');
   } finally { if (tmp) tmp.remove(); }
 }
+function guardarUltimoSO(v) { const n = Math.max(0, parseInt(v) || 0); refRoot.child('config/ultimoSO').set(n).then(() => toast('Listo. El próximo S.O. será el ' + (n + 1) + '.')).catch(e => alert('Error: ' + e.message)); }
 function abrirPedidos() {
+  firebase.database().ref('config/ultimoSO').once('value').then(sn => { $('ultimoSO').value = sn.val() == null ? '' : sn.val(); }).catch(() => {});
   firebase.database().ref('pedidos').orderByKey().limitToLast(50).once('value').then(sn => {
     const l = []; sn.forEach(c => { l.unshift(Object.assign({ _k: c.key }, c.val())); });
     pedidosCache = l;
     $('listaPedidos').innerHTML = l.length ? l.map((p, i) => `
       <div class="cli-row"><b>${esc(p.num)}</b> · ${esc(fechaTxt(p.fecha))}<br>
       ${esc(p.cliente ? p.cliente.nombre + ' (nivel ' + p.cliente.nivel + ')' : 'Cliente al detal')} · <b>${money(p.total)}</b><br>
-      ${p.vendido ? '<span class="st-ok"><b>✅ Vendido</b> (inventario descontado)</span><br>' : '<button class="btn" style="background:#28a745;padding:6px 10px;margin:4px 0" onclick="confirmarVenta(' + i + ')">Confirmar venta (descuenta inventario)</button><br>'}
+      ${p.vendido ? '<span class="st-ok"><b>✅ Vendido</b> (inventario descontado)</span> · ' + (saldoDe(p) > 0.004 ? '<b style="color:#c0392b">Saldo ' + money(saldoDe(p)) + '</b> <button class="link" onclick="abrirReportes(\'cobrar\')">Cobrar</button>' : '<b style="color:#1e7e34">Pagado</b>') + '<br>' : '<button class="btn" style="background:#28a745;padding:6px 10px;margin:4px 0" onclick="confirmarVenta(' + i + ')">Confirmar venta (descuenta inventario)</button><br>'}
       <button class="link" onclick="verRecibo(pedidosCache[${i}])">Ver recibo</button>
       <button class="link" onclick="borrarPedido('${esc(p._k)}')">Eliminar</button></div>`).join('') : '<p>Aún no hay pedidos guardados.</p>';
     $('modalPedidos').style.display = 'flex';
   }).catch(e => alert('Error: ' + e.message + '\n(Revisa que las reglas de Firebase incluyan "pedidos".)'));
 }
 function borrarPedido(k) { if (confirm('¿Eliminar este pedido?')) firebase.database().ref('pedidos/' + k).remove().then(abrirPedidos); }
+// ---------- Reportes, cobros y respaldo ----------
+let repPedidos = [], repTabAct = 'ventas';
+const n0 = v => +v || 0, r2 = v => Math.round(n0(v) * 100) / 100;
+const METODOS = ['Efectivo', 'ATH Móvil', 'Tarjeta', 'Cheque', 'Transferencia'];
+const pagadoDe = p => r2(Object.values(p.pagos || {}).reduce((a, x) => a + n0(x.monto), 0));
+const saldoDe = p => r2(n0(p.total) - pagadoDe(p));
+const fVenta = p => p.fechaVenta || p.fecha;
+const quienDe = p => p.cliente ? (p.cliente.negocio || p.cliente.nombre || 'Cliente') : 'Cliente al detal';
+function csvDescargar(nombre, filas) {
+  const csv = '﻿' + filas.map(f => f.map(v => { v = v == null ? '' : String(v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\r\n');
+  bajar(nombre, new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+}
+function bajar(nombre, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 500); }
+const hoyISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+function rangoRep() {
+  const v = $('repRango').value, h = new Date(); h.setHours(0, 0, 0, 0); let a = new Date(h), b = new Date(h); b.setDate(b.getDate() + 1);
+  if (v === 'semana') a.setDate(a.getDate() - 6);
+  else if (v === 'mes') a = new Date(h.getFullYear(), h.getMonth(), 1);
+  else if (v === 'mespas') { a = new Date(h.getFullYear(), h.getMonth() - 1, 1); b = new Date(h.getFullYear(), h.getMonth(), 1); }
+  else if (v === 'anio') a = new Date(h.getFullYear(), 0, 1);
+  else if (v === 'todo') a = new Date(2000, 0, 1);
+  else if (v === 'rango') { const d1 = $('repDesde').value, d2 = $('repHasta').value; a = d1 ? new Date(d1 + 'T00:00:00') : new Date(2000, 0, 1); b = d2 ? new Date(d2 + 'T00:00:00') : new Date(h); if (d2) b.setDate(b.getDate() + 1); }
+  return [a.getTime(), b.getTime()];
+}
+function ventasRango() { const [a, b] = rangoRep(); return repPedidos.filter(p => p.vendido && (t => t >= a && t < b)(new Date(fVenta(p)).getTime())); }
+function abrirReportes(tab) {
+  firebase.database().ref('pedidos').once('value').then(sn => {
+    const l = []; sn.forEach(c => { l.push(Object.assign({ _k: c.key }, c.val())); }); repPedidos = l;
+    $('repDesde').value = $('repHasta').value = hoyISO();
+    $('modalRep').style.display = 'flex'; repTab(tab || 'ventas');
+  }).catch(e => alert('Error: ' + e.message + '\n(Revisa las reglas de Firebase.)'));
+}
+function repTab(t) {
+  repTabAct = t;
+  ['ventas', 'cobrar', 'respaldo'].forEach(k => { $('repT_' + k).classList.toggle('on', k === t); });
+  $('repFiltros').style.display = t === 'ventas' ? 'flex' : 'none';
+  $('repDesdeHasta').style.display = $('repRango').value === 'rango' && t === 'ventas' ? 'inline' : 'none';
+  ({ ventas: pintarVentas, cobrar: pintarCobrar, respaldo: pintarRespaldo })[t]();
+}
+function agrupar(arr, fk) { const m = {}; arr.forEach(x => { const k = fk(x); (m[k] = m[k] || []).push(x); }); return m; }
+function pintarVentas() {
+  const v = ventasRango(), sub = r2(v.reduce((a, p) => a + n0(p.subtotal), 0)), ivu = r2(v.reduce((a, p) => a + n0(p.ivu), 0)), tot = r2(v.reduce((a, p) => a + n0(p.total), 0)),
+        cob = r2(v.reduce((a, p) => a + Math.min(pagadoDe(p), n0(p.total)), 0)), pend = r2(tot - cob);
+  const pz = {}; v.forEach(p => (p.lineas || []).forEach(l => { const o = pz[l.codigo] = pz[l.codigo] || { d: l.desc, n: 0, m: 0 }; o.n += n0(l.n); o.m += n0(l.sub); }));
+  const top = Object.entries(pz).sort((a, b) => b[1].m - a[1].m || b[1].n - a[1].n).slice(0, 10);
+  const cl = Object.entries(agrupar(v, quienDe)).map(([k, a]) => [k, a.length, r2(a.reduce((s, p) => s + n0(p.total), 0))]).sort((a, b) => b[2] - a[2]);
+  $('repCuerpo').innerHTML = `<div class="rep-cards"><div><small>Ventas</small><b>${v.length}</b></div><div><small>Subtotal</small><b>${money(sub)}</b></div><div><small>IVU</small><b>${money(ivu)}</b></div><div><small>Total vendido</small><b>${money(tot)}</b></div><div><small>Cobrado</small><b style="color:#1e7e34">${money(cob)}</b></div><div><small>Por cobrar</small><b style="color:${pend > 0 ? '#c0392b' : '#1e7e34'}">${money(pend)}</b></div></div>
+    <p class="hint">Cuenta solo pedidos con "Confirmar venta". Los pedidos pendientes no entran.</p>
+    <h4>Piezas más vendidas</h4>${top.length ? '<table class="rep-t"><tr><th>Código</th><th>Descripción</th><th>Cant.</th><th>Monto</th></tr>' + top.map(([c, o]) => `<tr><td><b>${esc(c)}</b></td><td>${esc(o.d)}</td><td>${o.n}</td><td>${money(o.m)}</td></tr>`).join('') + '</table>' : '<p class="hint">Sin ventas en este período.</p>'}
+    <h4>Por cliente</h4>${cl.length ? '<table class="rep-t"><tr><th>Cliente</th><th>Ventas</th><th>Total</th></tr>' + cl.map(([k, n, m]) => `<tr><td>${esc(k)}</td><td>${n}</td><td>${money(m)}</td></tr>`).join('') + '</table>' : ''}
+    <div class="modal-buttons"><button class="btn" style="background:#2f855a" onclick="csvVentas()">Descargar ventas (Excel/CSV)</button></div>`;
+}
+function csvVentas() {
+  const v = ventasRango(); if (!v.length) { alert('No hay ventas en este período.'); return; }
+  const f = [['S.O.', 'Pedido', 'Fecha venta', 'Cliente', 'Subtotal', 'IVU %', 'IVU', 'Total', 'Cobrado', 'Saldo']];
+  v.forEach(p => f.push([p.so != null ? p.so : '', p.num, fechaTxt(fVenta(p)), quienDe(p), n0(p.subtotal).toFixed(2), p.ivuPct, n0(p.ivu).toFixed(2), n0(p.total).toFixed(2), pagadoDe(p).toFixed(2), saldoDe(p).toFixed(2)]));
+  csvDescargar('ventas-mj-' + hoyISO() + '.csv', f);
+}
+function pintarCobrar() {
+  const v = repPedidos.filter(p => p.vendido && saldoDe(p) > 0.004).sort((a, b) => new Date(fVenta(a)) - new Date(fVenta(b)));
+  const tot = r2(v.reduce((a, p) => a + saldoDe(p), 0)), gr = agrupar(v, quienDe);
+  $('repCuerpo').innerHTML = `<div class="rep-cards"><div><small>Pedidos con saldo</small><b>${v.length}</b></div><div><small>Total por cobrar</small><b style="color:#c0392b">${money(tot)}</b></div></div>` +
+    (v.length ? Object.entries(gr).map(([k, a]) => `<h4>${esc(k)} · debe ${money(a.reduce((s, p) => s + saldoDe(p), 0))}</h4>` + a.map(p => { const i = repPedidos.indexOf(p), dias = Math.floor((Date.now() - new Date(fVenta(p)).getTime()) / 864e5);
+      return `<div class="cli-row">S.O. ${esc(p.so != null ? p.so : p.num)} · ${esc(fechaTxt(fVenta(p)))} · <b>${dias} día(s)</b><br>Total ${money(p.total)} · Cobrado ${money(pagadoDe(p))} · <b style="color:#c0392b">Saldo ${money(saldoDe(p))}</b>
+        ${Object.values(p.pagos || {}).map(x => `<br><small>↳ ${money(x.monto)} ${esc(x.metodo || '')} (${esc(fechaTxt(x.fecha))})</small>`).join('')}
+        <div class="inv-bar" style="margin-top:6px"><input type="number" step="0.01" min="0" id="pg${i}" value="${saldoDe(p).toFixed(2)}" style="width:100px"><select id="pm${i}">${METODOS.map(m => '<option>' + m + '</option>').join('')}</select><button class="btn" style="background:#28a745;padding:6px 10px" onclick="registrarPago(${i})">Registrar pago</button></div></div>`; }).join('')).join('') + '<div class="modal-buttons"><button class="btn" style="background:#2f855a" onclick="csvCobrar()">Descargar por cobrar (Excel/CSV)</button></div>' : '<p>🎉 No hay saldos pendientes.</p>');
+}
+function registrarPago(i) {
+  const p = repPedidos[i], m = r2($('pg' + i).value), met = $('pm' + i).value;
+  if (!(m > 0)) { alert('Escribe un monto mayor de 0.'); return; }
+  if (m > saldoDe(p) + 0.004 && !confirm('El monto (' + money(m) + ') es mayor que el saldo (' + money(saldoDe(p)) + '). ¿Registrarlo igual?')) return;
+  refRoot.child('pedidos/' + p._k + '/pagos').push({ monto: m, metodo: met, fecha: new Date().toISOString() }).then(() => {
+    p.pagos = p.pagos || {}; p.pagos['n' + Date.now()] = { monto: m, metodo: met, fecha: new Date().toISOString() };
+    toast('✔ Pago de ' + money(m) + ' registrado.'); repTab('cobrar');
+  }).catch(e => alert('Error: ' + e.message));
+}
+function csvCobrar() {
+  const f = [['Cliente', 'S.O.', 'Fecha venta', 'Días', 'Total', 'Cobrado', 'Saldo']];
+  repPedidos.filter(p => p.vendido && saldoDe(p) > 0.004).forEach(p => f.push([quienDe(p), p.so != null ? p.so : p.num, fechaTxt(fVenta(p)), Math.floor((Date.now() - new Date(fVenta(p)).getTime()) / 864e5), n0(p.total).toFixed(2), pagadoDe(p).toFixed(2), saldoDe(p).toFixed(2)]));
+  csvDescargar('por-cobrar-mj-' + hoyISO() + '.csv', f);
+}
+function pintarRespaldo() {
+  $('repCuerpo').innerHTML = `<p class="hint">Guarda estos archivos en tu computadora o en Google Drive. Hazlo una vez por semana.</p>
+    <div class="rep-bk"><b>Respaldo completo (.json)</b><br><small>Todo: catálogo, precios mayoristas, clientes, inventario, movimientos, pedidos y pagos. Es la copia de seguridad.</small><br><button class="btn" style="background:#003366" onclick="respaldoJSON()">Descargar respaldo completo</button></div>
+    <div class="rep-bk"><b>Catálogo + inventario (Excel/CSV)</b><br><small>Código, descripción, los 4 precios, existencia, mínimo y código de barras.</small><br><button class="btn" style="background:#2f855a" onclick="csvCatalogo()">Descargar catálogo</button></div>
+    <div class="rep-bk"><b>Clientes mayoristas (Excel/CSV)</b><br><button class="btn" style="background:#2f855a" onclick="csvClientes()">Descargar clientes</button></div>
+    <p class="hint" id="bkMsg"></p>`;
+}
+function respaldoJSON() {
+  const nodos = ['conectores', 'mayor1', 'mayor2', 'mayor3', 'clientes', 'pedidos', 'config', 'agotado', 'inventario', 'movimientos', 'barras'], out = { app: 'M&J catalogo', fecha: new Date().toISOString() };
+  $('bkMsg').textContent = 'Preparando respaldo...';
+  Promise.all(nodos.map(n => firebase.database().ref(n).once('value').then(s => { out[n] = s.val(); }))).then(() => {
+    bajar('respaldo-mj-' + hoyISO() + '.json', new Blob([JSON.stringify(out)], { type: 'application/json' })); $('bkMsg').textContent = '✔ Respaldo descargado.';
+  }).catch(e => { $('bkMsg').textContent = ''; alert('Error: ' + e.message); });
+}
+function csvCatalogo() {
+  const f = [['Código', 'Pines', 'Descripción', 'Detal', 'Mayor 1', 'Mayor 2', 'Mayor 3', 'Existencia', 'Mínimo', 'Código de barras']];
+  catalogo.forEach(c => { const iv = (typeof inv !== 'undefined' && inv[c.id]) || {}; f.push([c.codigo, c.pines || '', c.descripcion || '', c.precio || '', baseP(c, 'precioM1'), baseP(c, 'precioM2'), baseP(c, 'precioM3'), iv.cant == null ? '' : iv.cant, iv.min == null ? '' : iv.min, c.codigo]); });
+  csvDescargar('catalogo-mj-' + hoyISO() + '.csv', f);
+}
+function csvClientes() {
+  firebase.database().ref('clientes').once('value').then(s => {
+    const f = [['Nombre', 'Negocio', 'Teléfono', 'Registro', 'Nivel', 'IVU']]; s.forEach(c => { const x = c.val(); f.push([x.nombre, x.negocio, x.telefono, x.registro || '', x.nivel, x.ivu == null ? '' : x.ivu]); });
+    csvDescargar('clientes-mj-' + hoyISO() + '.csv', f);
+  }).catch(e => alert('Error: ' + e.message));
+}
 // ---------- Editor rápido de precios ----------
 let edPrecios = {};
 const CAMPOS_P = ['precio', 'precioM1', 'precioM2', 'precioM3'];
