@@ -106,6 +106,24 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
 .ivu-admin{display:none;margin:10px 0;font-size:14px}
 .admin .ivu-admin{display:block}
 .ivu-admin select{padding:8px;border:1px solid var(--borde);border-radius:6px;font-size:14px}
+.stock-admin{display:none;font-size:12px;margin:2px 0;font-weight:bold}
+.admin .stock-admin{display:block}
+.st-ok{color:#2f855a}.st-low{color:#b7791f}.st-out{color:#e53e3e}
+.tag-agot{display:inline-block;background:#e53e3e;color:#fff;font-size:12px;font-weight:bold;padding:3px 10px;border-radius:10px;margin:4px auto}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.alerta-inv{display:none;background:#fff3cd;border:1px solid #f0c36d;color:#7a5b00;padding:10px 14px;border-radius:8px;margin:8px 0;font-size:14px;font-weight:bold;cursor:pointer}
+.admin .alerta-inv.on{display:block}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1a202c;color:#fff;padding:12px 18px;border-radius:10px;font-size:15px;z-index:3000;display:none;max-width:90vw;text-align:center}
+.inv-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.inv-bar select,.inv-bar input[type=number],.inv-bar input[type=text],.inv-bar input[type=search]{padding:9px;border:1px solid var(--borde);border-radius:6px;font-size:15px}
+#invScan{flex:1;min-width:180px;font-size:17px;border:2px solid var(--azul)}
+#tblInv{width:100%;border-collapse:collapse;font-size:14px}
+#tblInv th{position:sticky;top:0;background:#fff;text-align:left;padding:6px}
+#tblInv td{padding:4px;border-bottom:1px solid var(--borde)}
+#tblInv input{width:68px;padding:6px;border:1px solid var(--borde);border-radius:4px}
+.inv-log{font-size:14px;margin:6px 0;min-height:22px}
+.inv-log div{padding:2px 0;border-bottom:1px dashed var(--borde)}
+#camReader{width:100%;max-width:420px;margin:8px auto;display:none}
 </style>
 </head>
 <body>
@@ -128,6 +146,8 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
   <button class="btn-add" style="background:#e67e22" onclick="abrirPrecios()">⚡ Editar precios rápido</button>
   <button class="btn-add" style="background:#6b46c1" onclick="abrirEtiquetas()">🏷️ Imprimir etiquetas</button>
   <button class="btn-add" style="background:#003366" onclick="abrirPedidos()">🧾 Pedidos</button>
+  <button class="btn-add" style="background:#2f855a" onclick="abrirInventario()">📦 Inventario</button>
+  <div class="alerta-inv" id="alertaInv" onclick="abrirInventario(true)"></div>
 
   <div class="search-container">
     <input type="search" id="searchInput" oninput="filtrar()" placeholder="Buscar por código (ej. 2837), descripción o pines...">
@@ -141,7 +161,7 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
   <div class="grid-container" id="connectorGrid"></div>
 </main>
 
-<footer><button onclick="accesoAdmin()">🔑 Admin</button><br><small style="color:#999">Versión: fondo azul + IVU + recibos (20-nov-2026)</small></footer>
+<footer><button onclick="accesoAdmin()">🔑 Admin</button><br><small style="color:#999">Versión: inventario + código de barras (21-nov-2026)</small></footer>
 
 <div class="barra-pedido" id="barraPedido">
   <span id="barraTexto"></span>
@@ -211,6 +231,32 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
   </div>
 </div>
 
+<div class="modal" id="modalInv">
+  <div class="modal-content modal-wide">
+    <h3>📦 Inventario</h3>
+    <p class="hint">Escanea el código de barras de una pieza (con la cámara o con un lector) para sumarla o restarla. Cambia a "Salida" para descontar.</p>
+    <div class="inv-bar">
+      <select id="invModo"><option value="1">Entrada (+)</option><option value="-1">Salida (−)</option></select>
+      <input type="number" id="invCant" value="1" min="1" style="width:76px" title="Cantidad por escaneo">
+      <input type="text" id="invScan" placeholder="Escanea o escribe el código y pulsa Enter" autocomplete="off">
+      <button class="btn" style="background:#003366" onclick="invEscanear($('invScan').value)">OK</button>
+      <button class="btn" style="background:#6b46c1" id="btnCam" onclick="toggleCamara()">📷 Cámara</button>
+    </div>
+    <div id="camReader"></div>
+    <div class="inv-log" id="invLog"></div>
+    <div class="inv-bar">
+      <input type="search" id="invFilt" oninput="tablaInv()" placeholder="Filtrar por código o descripción" style="flex:1;min-width:160px">
+      <label style="font-size:14px"><input type="checkbox" id="invSoloBajo" onchange="tablaInv()"> Solo poco inventario</label>
+    </div>
+    <div style="overflow:auto;max-height:38vh"><table id="tblInv"></table></div>
+    <div class="modal-buttons">
+      <button class="btn btn-wa" onclick="compartirReposicion()">Compartir lista de reposición</button>
+      <button class="btn" style="background:#718096" onclick="cerrarInv()">Cerrar</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
 <div class="modal" id="modalPedidos">
   <div class="modal-content">
     <h3>Pedidos recibidos</h3>
@@ -220,8 +266,9 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
 </div>
 
 <div class="modal" id="modalRecibo">
-  <div class="modal-content" style="max-width:440px">
-    <div id="reciboCont"></div>
+  <div class="modal-content" style="max-width:760px">
+    <label style="font-size:14px;display:block;margin-bottom:8px">Formato: <select id="reciboFmt" style="padding:7px" onchange="try{localStorage.setItem('fmtReciboMJ',this.value)}catch(e){};verRecibo(reciboActual)"><option value="carta">Hoja (carta)</option><option value="ticket">Ticket (80 mm)</option></select></label>
+    <div id="reciboCont" style="overflow:auto;border:1px solid var(--borde)"></div>
     <div class="modal-buttons"><button class="btn btn-wa" onclick="imprimirRecibo()">Imprimir / PDF</button><button class="btn" style="background:#003366" onclick="compartirRecibo()">Compartir</button></div>
     <div class="modal-buttons"><button class="btn" style="background:#718096" onclick="cerrar('modalRecibo')">Cerrar</button></div>
   </div>
@@ -268,6 +315,7 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
     <h3>Imprimir etiquetas para cajas</h3>
     <p class="hint">Etiqueta de 1.96 x 1.18 pulgadas (50x30 mm) con el número de parte y la descripción. Pon cuántas etiquetas quieres de cada pieza.</p>
     <label style="display:block;margin:6px 0;font-size:14px"><input type="checkbox" id="ePines"> Incluir los pines</label>
+    <label style="display:block;margin:6px 0;font-size:14px"><input type="checkbox" id="eBarras" checked> Incluir código de barras (para escanear al inventario)</label>
     <label style="display:block;margin:6px 0;font-size:14px">Papel: <select id="ePapel" style="padding:6px"><option value="v" selected>30 x 50 mm (alto)</option><option value="h">50 x 30 mm (ancho)</option></select></label>
     <label style="display:block;margin:6px 0 10px;font-size:14px">Giro del texto: <select id="eGiro" style="padding:6px"><option value="90" selected>Girado a la derecha (se lee de arriba hacia abajo)</option><option value="270">Girado a la izquierda (se lee de abajo hacia arriba)</option><option value="0">Sin girar</option></select></label>
     <input type="search" id="efilt" oninput="tablaEtiq()" placeholder="Filtrar por código o descripción" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid var(--borde);border-radius:6px">
@@ -388,10 +436,12 @@ function filtrar() {
       <h3>${esc(c.codigo)}</h3>
       <div class="pines">${esc(c.pines)}</div>
       <div class="descripcion">${esc(c.descripcion) || 'Sin descripción'}</div>
+      ${agot[c.id] ? '<div><span class="tag-agot">Agotado</span></div>' : ''}
+      ${(st => st ? '<div class="stock-admin st-' + st + '">Existencia: ' + esc(inv[c.id].cant) + (st === 'low' ? ' (poco inventario)' : st === 'out' ? ' (agotado)' : '') + '</div>' : '')(estadoInv(c.id))}
       ${(p => p.v ? `<div class="precio">${esc(p.v)}<small>${p.tag === 'detal' ? 'Precio al detal' : 'Tu precio mayorista'}</small></div>` : '')(verPrecio(c))}
       <div class="buy">
         <button class="btn btn-wa" data-act="wa" data-id="${esc(c.id)}">Preguntar por WhatsApp</button>
-        <button class="btn btn-cart" data-act="add" data-id="${esc(c.id)}">+ Agregar al pedido</button>
+        <button class="btn btn-cart" data-act="add" data-id="${esc(c.id)}" ${agot[c.id] ? 'disabled' : ''}>${agot[c.id] ? 'Agotado' : '+ Agregar al pedido'}</button>
       </div>
       <div class="actions">
         <button class="btn btn-edit" data-act="edit" data-id="${esc(c.id)}">✏️ Editar</button>
@@ -399,13 +449,14 @@ function filtrar() {
       </div>
     </div>`).join('') :
     `<div class="vacio">No encontramos piezas con esos filtros.<br><a href="${wa('Hola, busco un conector y no lo encontré en el catálogo.')}" target="_blank" rel="noopener">Escríbenos por WhatsApp y te ayudamos</a></div>`;
+  alertaInv();
 }
 
 function limpiar() { sel = { cat: "", pines: "", marca: "" }; $('searchInput').value = ""; dibujarChips(); filtrar(); }
 
 // ---------- Pedido (carrito) ----------
 function guardarCarrito() { try { localStorage.setItem("carritoMJ", JSON.stringify(carrito)); } catch (e) {} barra(); }
-function agregar(id) { carrito[id] = (carrito[id] || 0) + 1; guardarCarrito(); }
+function agregar(id) { if (agot[id]) { toast('Pieza agotada. Pregunta por WhatsApp.'); return; } carrito[id] = (carrito[id] || 0) + 1; guardarCarrito(); }
 function cambiar(id, d) { carrito[id] = (carrito[id] || 0) + d; if (carrito[id] <= 0) delete carrito[id]; guardarCarrito(); listaCarrito(); }
 function vaciarCarrito() { carrito = {}; guardarCarrito(); cerrar('modalCarrito'); }
 function items() { return Object.keys(carrito).map(id => ({ c: catalogo.find(x => x.id === id), n: carrito[id] })).filter(i => i.c); }
@@ -522,13 +573,196 @@ function registrarCliente() {
     window.open(wa(`Hola M & J Distributors, me registré como cliente mayorista.\nNombre: ${nombre}\nNegocio: ${negocio || '-'}\n${tipo === 'comerciante' ? 'Registro de comerciante' : 'Número patronal'}: ${registro}\nTeléfono: ${id}`), '_blank');
   }).catch(e => alert(e.code === 'auth/email-already-in-use' ? 'Ese teléfono ya está registrado. Usa "Ya estoy registrado".' : 'Error: ' + e.message));
 }
+
+// ---------- Inventario ----------
+const MIN_DEF = 5; // mínimo por defecto cuando una pieza no tiene el suyo
+let inv = {}, barrasMap = {}, agot = {}, invEsc = [];
+const refInv = firebase.database().ref('inventario');
+firebase.database().ref('agotado').on('value', sn => { agot = sn.val() || {}; filtrar(); }, () => {});
+const esAdmin = () => document.body.classList.contains('admin');
+const norm = s => String(s || '').trim().toUpperCase();
+const kBarras = s => norm(s).replace(/[.#$\[\]\/]/g, '_');
+const minDe = id => (inv[id] && inv[id].min != null && inv[id].min !== '') ? +inv[id].min : MIN_DEF;
+function estadoInv(id) { const i = inv[id]; if (!i || i.cant == null) return null; const c = +i.cant; return c <= 0 ? 'out' : (c <= minDe(id) ? 'low' : 'ok'); }
+function toast(t) { const e = $('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => { e.style.display = 'none'; }, 3500); }
+function beep(ok) {
+  try { const a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = ok ? 880 : 220; g.gain.value = .08; o.start(); o.stop(a.currentTime + (ok ? .12 : .35)); } catch (e) {}
+  try { navigator.vibrate && navigator.vibrate(ok ? 40 : [80, 60, 80]); } catch (e) {}
+}
+function escucharInv() {
+  [['inventario', v => { inv = v; }], ['barras', v => { barrasMap = v; }]].forEach(([n, f]) => {
+    const r = firebase.database().ref(n); escuchas.push(r);
+    r.on('value', sn => {
+      f(sn.val() || {});
+      if (n === 'inventario') { filtrar(); if ($('modalInv').style.display === 'flex' && !(document.activeElement && document.activeElement.closest('#tblInv'))) tablaInv(); }
+    }, () => {});
+  });
+}
+function alertaInv() {
+  const b = $('alertaInv'); if (!b) return;
+  let low = 0, out = 0;
+  if (esAdmin()) catalogo.forEach(c => { const s = estadoInv(c.id); if (s === 'low') low++; if (s === 'out') out++; });
+  b.classList.toggle('on', low + out > 0);
+  b.textContent = '⚠️ Inventario: ' + (out ? out + ' agotada(s)' : '') + (out && low ? ' y ' : '') + (low ? low + ' con poco inventario' : '') + ' — toca para ver';
+}
+function buscarPieza(cod) {
+  const n = norm(cod); if (!n) return null;
+  let c = catalogo.find(x => norm(x.codigo) === n);
+  if (!c && barrasMap[kBarras(cod)]) c = catalogo.find(x => x.id === barrasMap[kBarras(cod)]);
+  return c || null;
+}
+// Suma o resta existencias (transacción: no se pisa si dos personas escanean a la vez) y deja el historial
+function moverStock(id, delta, tipo, nota, extra) {
+  const c = catalogo.find(x => x.id === id);
+  return firebase.database().ref('inventario/' + id + '/cant').transaction(v => (+v || 0) + delta).then(r => {
+    if (!r.committed) throw new Error('No se pudo actualizar la existencia');
+    const nueva = +r.snapshot.val(), up = {};
+    up['movimientos/' + firebase.database().ref('movimientos').push().key] = Object.assign({ id, codigo: c ? c.codigo : id, tipo, cant: delta, nueva, fecha: new Date().toISOString(), nota: nota || '' }, extra || {});
+    up['agotado/' + id] = nueva <= 0 ? true : null;
+    return refRoot.update(up).then(() => nueva);
+  });
+}
+function invLog(t, err) {
+  invEsc.unshift({ t, err }); invEsc = invEsc.slice(0, 6);
+  $('invLog').innerHTML = invEsc.map(x => `<div style="color:${x.err ? '#e53e3e' : '#2f855a'}">${esc(x.t)}</div>`).join('');
+}
+function invEscanear(cod) {
+  cod = String(cod || '').trim(); $('invScan').value = '';
+  if (!cod) return Promise.resolve();
+  const modo = +$('invModo').value, n = Math.max(1, parseInt($('invCant').value) || 1);
+  let c = buscarPieza(cod);
+  if (!c) {
+    beep(false);
+    const r = prompt('El código "' + cod + '" no está en el catálogo.\nEscribe el código de la pieza a la que pertenece (o deja vacío para ignorarlo):');
+    if (!r || !r.trim()) { invLog('✖ ' + cod + ' - no encontrado', true); return Promise.resolve(); }
+    c = catalogo.find(x => norm(x.codigo) === norm(r));
+    if (!c) { invLog('✖ ' + r.trim() + ' - esa pieza no existe', true); return Promise.resolve(); }
+    barrasMap[kBarras(cod)] = c.id; refRoot.child('barras/' + kBarras(cod)).set(c.id).catch(() => {}); // lo recuerda para la próxima
+  }
+  const delta = modo * n;
+  if (delta < 0 && estadoInv(c.id) === null) { beep(false); invLog('✖ ' + c.codigo + ' - aún no tiene existencia contada. Registra una entrada o escribe la existencia en la tabla.', true); return Promise.resolve(); }
+  return moverStock(c.id, delta, delta > 0 ? 'entrada' : 'salida', 'escaneo').then(nueva => {
+    beep(true);
+    invLog((delta > 0 ? '✔ +' : '✔ ') + delta + ' · ' + c.codigo + (c.descripcion ? ' (' + c.descripcion + ')' : '') + ' → ' + nueva);
+    if (nueva <= 0) toast('⚠️ ' + c.codigo + ' AGOTADO'); else if (nueva <= minDe(c.id)) toast('⚠️ Poco inventario: ' + c.codigo + ' (quedan ' + nueva + ')');
+    tablaInv(); alertaInv(); if ($('invScan')) $('invScan').focus();
+  }).catch(e => {
+    beep(false); invLog('✖ Error: ' + e.message, true);
+    alert('No se pudo guardar. Revisa que las reglas de Firebase incluyan "inventario", "movimientos", "barras" y "agotado".');
+  });
+}
+function tablaInv() {
+  const t = $('invFilt').value.toLowerCase().trim(), solo = $('invSoloBajo').checked;
+  const l = catalogo.filter(c => (!t || (c.codigo || '').toLowerCase().includes(t) || (c.descripcion || '').toLowerCase().includes(t)) && (!solo || ['low', 'out'].includes(estadoInv(c.id))));
+  const lbl = { ok: '<span class="st-ok">OK</span>', low: '<span class="st-low">⚠ Bajo</span>', out: '<span class="st-out">⛔ Agotado</span>' };
+  $('tblInv').innerHTML = '<tr><th>Código</th><th>Descripción</th><th>Existencia</th><th>Mínimo</th><th></th></tr>' + l.map(c => {
+    const i = inv[c.id] || {};
+    return `<tr><td><b>${esc(c.codigo)}</b></td><td>${esc(desc(c))}</td>` +
+      `<td><input type="number" data-id="${esc(c.id)}" data-k="cant" value="${i.cant != null ? esc(i.cant) : ''}" placeholder="-"></td>` +
+      `<td><input type="number" min="0" data-id="${esc(c.id)}" data-k="min" value="${i.min != null ? esc(i.min) : ''}" placeholder="${MIN_DEF}"></td>` +
+      `<td>${lbl[estadoInv(c.id)] || '<span style="color:#999">sin contar</span>'}</td></tr>`;
+  }).join('');
+}
+function abrirInventario(soloBajo) {
+  $('invSoloBajo').checked = !!soloBajo; $('invFilt').value = ''; tablaInv();
+  $('modalInv').style.display = 'flex'; setTimeout(() => $('invScan').focus(), 150);
+}
+function cerrarInv() { pararCamara(); cerrar('modalInv'); }
+function compartirReposicion() {
+  const l = catalogo.filter(c => ['low', 'out'].includes(estadoInv(c.id)));
+  if (!l.length) { toast('No hay piezas con poco inventario.'); return; }
+  const t = '*Lista de reposición - M & J Distributors*\n' + l.map(c => `• ${c.codigo} (${desc(c)}): quedan ${(inv[c.id] || {}).cant} / mínimo ${minDe(c.id)}`).join('\n');
+  window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank');
+}
+$('invScan').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); invEscanear($('invScan').value); } });
+$('tblInv').addEventListener('change', e => {
+  const i = e.target, id = i.dataset.id; if (!id) return;
+  if (i.dataset.k === 'min') { refInv.child(id + '/min').set(i.value === '' ? null : Math.max(0, +i.value)).then(alertaInv).catch(er => alert('Error: ' + er.message)); return; }
+  if (i.value === '') return;
+  const nuevo = Math.round(+i.value), ya = inv[id] && inv[id].cant != null, delta = nuevo - (ya ? +inv[id].cant : 0);
+  if (ya && !delta) return;
+  const c = catalogo.find(x => x.id === id);
+  moverStock(id, delta, 'ajuste', 'ajuste manual').then(n => { toast('Existencia de ' + (c ? c.codigo : id) + ': ' + n); tablaInv(); alertaInv(); })
+    .catch(er => alert('Error: ' + er.message + '\n(Revisa las reglas de Firebase de "inventario".)'));
+});
+$('tblInv').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.dataset.id) return;
+  e.preventDefault();
+  const tr = e.target.closest('tr'), sig = tr.nextElementSibling, k = e.target.dataset.k, nid = sig && sig.querySelector('input').dataset.id;
+  e.target.blur();
+  if (nid) setTimeout(() => { const n = [...$('tblInv').querySelectorAll('input')].find(x => x.dataset.id === nid && x.dataset.k === k); if (n) { n.focus(); n.select(); } }, 60);
+});
+
+// ---------- Cámara (lee códigos de barras y QR) ----------
+let cam = null, camUlt = '', camT = 0;
+function cargarLibCam() {
+  return window.Html5Qrcode ? Promise.resolve() : new Promise((ok, no) => {
+    const s = document.createElement('script'); s.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s);
+  });
+}
+async function toggleCamara() {
+  if (cam) return pararCamara();
+  try {
+    await cargarLibCam();
+    const F = Html5QrcodeSupportedFormats;
+    $('camReader').style.display = 'block';
+    cam = new Html5Qrcode('camReader', { formatsToSupport: [F.CODE_128, F.CODE_39, F.CODE_93, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.ITF, F.CODABAR, F.QR_CODE], useBarCodeDetectorIfSupported: true, verbose: false });
+    await cam.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 300, height: 140 } }, txt => {
+      const ahora = Date.now(); if (txt === camUlt && ahora - camT < 2500) return; camUlt = txt; camT = ahora;
+      invEscanear(txt);
+    }, () => {});
+    $('btnCam').textContent = '⏹ Detener cámara';
+  } catch (e) {
+    cam = null; $('camReader').style.display = 'none';
+    alert('No se pudo abrir la cámara (' + ((e && e.message) || e) + ').\nRevisa el permiso de cámara del navegador, o usa un lector de código de barras, o escribe el código.');
+  }
+}
+function pararCamara() { const c = cam; cam = null; $('btnCam').textContent = '📷 Cámara'; $('camReader').style.display = 'none'; if (c) c.stop().then(() => c.clear()).catch(() => {}); }
+
+// ---------- Pedidos: confirmar venta descuenta inventario ----------
+function confirmarVenta(i) {
+  const p = pedidosCache[i]; if (!p || p.vendido) return;
+  const L = (p.lineas || []).map(l => ({ l, c: catalogo.find(x => norm(x.codigo) === norm(l.codigo)) }));
+  const faltan = L.filter(x => !x.c).length, sinConteo = L.filter(x => x.c && estadoInv(x.c.id) === null).length;
+  if (!confirm('¿Confirmar la venta del pedido ' + p.num + '?\nSe descontará del inventario:\n' + L.map(x => '• ' + x.l.n + ' x ' + x.l.codigo + (x.c && estadoInv(x.c.id) === null ? ' (sin existencia contada: no se descuenta)' : '')).join('\n') + (faltan ? '\n\n(' + faltan + ' pieza(s) ya no están en el catálogo y se omiten)' : ''))) return;
+  return firebase.database().ref('pedidos/' + p._k + '/vendido').transaction(v => v ? undefined : true).then(r => {
+    if (!r.committed) { alert('Este pedido ya estaba confirmado.'); return; }
+    return Promise.all(L.filter(x => x.c && estadoInv(x.c.id) !== null).map(x => moverStock(x.c.id, -(+x.l.n || 0), 'salida', 'pedido ' + p.num, { pedido: p.num }))).then(() => {
+      refRoot.child('pedidos/' + p._k + '/fechaVenta').set(new Date().toISOString());
+      const bajos = L.filter(x => x.c && ['low', 'out'].includes(estadoInv(x.c.id))).map(x => x.c.codigo);
+      toast('✔ Venta confirmada, inventario actualizado.' + (sinConteo ? ' (' + sinConteo + ' pieza(s) sin existencia contada no se descontaron)' : '') + (bajos.length ? ' ⚠️ Poco inventario: ' + bajos.join(', ') : ''));
+      alertaInv(); abrirPedidos();
+    });
+  }).catch(e => alert('Error al confirmar: ' + e.message + '\n(Revisa las reglas de Firebase.)'));
+}
+
+// ---------- Código de barras (Code 128) para las etiquetas ----------
+const C128 = ["212222","222122","222221","121223","121322","131222","122213","122312","132212","221213","221312","231212","112232","122132","122231","113222","123122","123221","223211","221132","221231","213212","223112","312131","311222","321122","321221","312212","322112","322211","212123","212321","232121","111323","131123","131321","112313","132113","132311","211313","231113","231311","112133","112331","132131","113123","113321","133121","313121","211331","231131","213113","213311","213131","311123","311321","331121","312113","312311","332111","314111","221411","431111","111224","111422","121124","121421","141122","141221","112214","112412","122114","122411","142112","142211","241211","221114","413111","241112","134111","111242","121142","121241","114212","124112","124211","411212","421112","421211","212141","214121","412121","111143","111341","131141","114113","114311","411113","411311","113141","114131","311141","411131","211412","211214","211232","2331112"];
+// Solo números de largo par -> Code C (más compacto); cualquier otro texto -> Code B
+function code128(text) {
+  const t = String(text); if (!t) throw new Error('vacío');
+  const cw = [];
+  if (/^\d+$/.test(t) && t.length % 2 === 0) { cw.push(105); for (let i = 0; i < t.length; i += 2) cw.push(+t.slice(i, i + 2)); }
+  else { cw.push(104); for (let i = 0; i < t.length; i++) { const c = t.charCodeAt(i) - 32; if (c < 0 || c > 95) throw new Error('caracter no válido'); cw.push(c); } }
+  let sum = cw[0]; for (let i = 1; i < cw.length; i++) sum += cw[i] * i;
+  cw.push(sum % 103); cw.push(106);
+  return cw.map(k => C128[k]).join('');
+}
+function svgBarras(txt, anchoMm, altoMm) {
+  const pat = code128(txt), tot = [...pat].reduce((a, c) => a + +c, 0), quiet = 10, W = tot + quiet * 2, xmm = Math.min(0.5, anchoMm * 0.98 / W);
+  let x = quiet, bar = true, d = '';
+  for (const ch of pat) { const w = +ch; if (bar) d += `M${x},0h${w}v1h-${w}z`; x += w; bar = !bar; }
+  return `<svg class="e-bc" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} 1" preserveAspectRatio="none" shape-rendering="crispEdges" style="width:${(W * xmm).toFixed(2)}mm;height:${altoMm}mm;display:block"><rect width="${W}" height="1" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
+// ---------- /Inventario ----------
+
 let escuchas = [];
 function escuchar(n) { const r = firebase.database().ref('mayor' + n); escuchas.push(r); r.on('value', sn => { pm[n] = sn.val() || {}; filtrar(); }); }
 auth.onAuthStateChanged(u => {
-  escuchas.forEach(r => r.off()); escuchas = []; cliente = null; pm = { 1: {}, 2: {}, 3: {} };
+  escuchas.forEach(r => r.off()); escuchas = []; cliente = null; pm = { 1: {}, 2: {}, 3: {} }; inv = {}; barrasMap = {};
   document.body.classList.toggle('admin', !!u && !u.email.endsWith(MAILCLI));
   if (!u) return actualizarCliente();
-  if (!u.email.endsWith(MAILCLI)) { [1, 2, 3].forEach(escuchar); return actualizarCliente(); }
+  if (!u.email.endsWith(MAILCLI)) { [1, 2, 3].forEach(escuchar); escucharInv(); return actualizarCliente(); }
   refClientes.child(u.uid).once('value').then(sn => {
     const d = sn.val();
     if (d && d.nivel) { cliente = d; escuchar(d.nivel); }
@@ -600,34 +834,58 @@ function textoPedido(p) {
     (p.sinPrecio ? `\n(${p.sinPrecio} pieza(s) sin precio, no incluidas en el total)` : '') +
     '\n\n¿Me confirman disponibilidad y total? Gracias.';
 }
-function htmlRecibo(p) {
-  const rows = (p.lineas || []).map(l => `<tr style="border-bottom:1px solid #ddd"><td style="padding:5px 4px;vertical-align:top">${l.n}</td><td style="padding:5px 4px"><b>${esc(l.codigo)}</b><br><span style="font-size:11px;color:#444">${esc(l.desc)}</span></td><td style="padding:5px 4px;text-align:right;white-space:nowrap">${l.pu == null ? 'consultar' : esc(l.precio)}</td><td style="padding:5px 4px;text-align:right;white-space:nowrap">${l.sub == null ? '-' : money(l.sub)}</td></tr>`).join('');
-  const c = p.cliente;
-  return `<div style="font-family:Arial,sans-serif;color:#111;background:#fff;padding:14px">
-    <div style="text-align:center"><div style="font-size:20px;font-weight:bold">M &amp; J Distributors</div><div style="font-size:12px">Conectores y accesorios para autos · WhatsApp 787-674-7576</div></div>
-    <hr style="margin:10px 0">
-    <div style="display:flex;justify-content:space-between;font-size:13px"><b>Pedido ${esc(p.num)}</b><span>${esc(fechaTxt(p.fecha))}</span></div>
-    <div style="font-size:13px;margin-top:4px">${c ? 'Cliente: ' + esc(c.nombre) + (c.negocio ? ' (' + esc(c.negocio) + ')' : '') + '<br>Tel: ' + esc(c.telefono) + ' · Mayorista nivel ' + esc(c.nivel) : 'Cliente al detal'}</div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px"><thead><tr style="border-bottom:2px solid #111;text-align:left"><th style="padding:4px">Cant.</th><th style="padding:4px">Pieza</th><th style="padding:4px;text-align:right">Precio</th><th style="padding:4px;text-align:right">Subtotal</th></tr></thead><tbody>${rows}</tbody></table>
-    ${p.ivuPct > 0 ? `<div style="text-align:right;font-size:13px;margin-top:10px">Subtotal: ${money(p.subtotal)}<br>IVU (${esc(p.ivuPct)}%): ${money(p.ivu)}</div>` : ''}
-    <div style="text-align:right;font-size:18px;font-weight:bold;margin-top:${p.ivuPct > 0 ? 4 : 10}px">TOTAL: ${money(p.total)}</div>
-    ${p.sinPrecio ? `<div style="font-size:11px;color:#b00;text-align:right">${p.sinPrecio} pieza(s) sin precio: no incluidas en el total.</div>` : ''}
-    <div style="font-size:11px;color:#555;margin-top:12px">Pedido sujeto a confirmación de disponibilidad. Este documento no es una factura.</div></div>`;
+const fmtRecibo = () => { const e = $('reciboFmt'); return e ? e.value : 'carta'; };
+function htmlRecibo(p, fmt) {
+  fmt = fmt || fmtRecibo();
+  const c = p.cliente, vend = !!p.vendido, titulo = vend ? 'RECIBO DE VENTA' : 'PEDIDO', numLbl = vend ? 'RECIBO No.' : 'PEDIDO No.';
+  const pie = vend ? 'Gracias por su compra.' : 'Pedido sujeto a confirmación de disponibilidad. Gracias por preferirnos.';
+  const clienteTxt = c ? esc(c.nombre) + (c.negocio ? '<br>' + esc(c.negocio) : '') + (c.telefono ? '<br>Tel: ' + esc(c.telefono) : '') + '<br>Cliente mayorista nivel ' + esc(c.nivel) : 'Cliente al detal';
+  const sinP = p.sinPrecio ? `<div style="font-size:11px;color:#b00;text-align:right;margin-top:4px">${p.sinPrecio} pieza(s) sin precio: no incluidas en el total.</div>` : '';
+  if (fmt === 'ticket') {
+    const sep = '<div style="border-top:1px dashed #000;margin:7px 0"></div>';
+    const fila = (a, b, st) => `<div style="display:flex;justify-content:space-between;${st || ''}"><span>${a}</span><span>${b}</span></div>`;
+    const L = (p.lineas || []).map(l => `<div style="margin-top:5px"><div><b>${esc(l.codigo)}</b> ${esc(l.desc)}</div>${fila(l.n + ' x ' + (l.pu == null ? 'consultar' : esc(l.precio)), l.sub == null ? '-' : money(l.sub))}</div>`).join('');
+    return `<div style="font-family:'Courier New',Courier,monospace;color:#000;background:#fff;width:72mm;max-width:100%;margin:0 auto;padding:6px;font-size:12px;line-height:1.3">
+      <div style="text-align:center"><b style="font-size:15px">M &amp; J DISTRIBUTORS</b><br>Since 2004<br>WhatsApp 787-674-7576</div>${sep}
+      <div style="text-align:center"><b>${titulo}</b></div>
+      <div>${numLbl} ${esc(p.num)}<br>${esc(fechaTxt(p.fecha))}</div>
+      <div style="margin-top:4px">${clienteTxt}</div>${sep}${L}${sep}
+      ${p.ivuPct > 0 ? fila('Subtotal', money(p.subtotal)) + fila('IVU (' + esc(p.ivuPct) + '%)', money(p.ivu)) : ''}
+      ${fila('TOTAL', money(p.total), 'font-size:15px;font-weight:bold;margin-top:3px')}${sinP}${sep}
+      <div style="text-align:center">${pie}</div></div>`;
+  }
+  const filas = (p.lineas || []).map(l => `<tr style="border-bottom:1px solid #d9d9d9"><td style="padding:7px 8px;vertical-align:top;white-space:nowrap"><b>${esc(l.codigo)}</b></td><td style="padding:7px 8px;vertical-align:top">${esc(l.desc)}</td><td style="padding:7px 8px;text-align:center;vertical-align:top">${l.n}</td><td style="padding:7px 8px;text-align:right;vertical-align:top;white-space:nowrap">${l.pu == null ? 'consultar' : esc(l.precio)}</td><td style="padding:7px 8px;text-align:right;vertical-align:top;white-space:nowrap">${l.sub == null ? '-' : money(l.sub)}</td></tr>`).join('');
+  const tot = (a, b) => `<tr><td style="padding:4px 8px;text-align:right">${a}</td><td style="padding:4px 8px;text-align:right;width:110px">${b}</td></tr>`;
+  const th = 'border:1px solid #999;padding:4px 14px;background:#eef2f7';
+  return `<div style="font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff;padding:20px;min-width:560px;font-size:13px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+      <div><div style="font-size:22px;font-weight:bold;color:#003366">M &amp; J Distributors</div><div style="font-size:12px;color:#444;line-height:1.5;margin-top:2px">Since 2004<br>Conectores y accesorios para autos<br>WhatsApp 787-674-7576</div></div>
+      <div style="text-align:right"><div style="font-size:24px;font-weight:bold;color:#003366;letter-spacing:.5px">${titulo}</div>
+        <table style="margin-left:auto;margin-top:6px;border-collapse:collapse;font-size:12px"><tr><th style="${th}">FECHA</th><th style="${th}">${numLbl}</th></tr><tr><td style="border:1px solid #999;padding:5px 14px;text-align:center">${esc(fechaTxt(p.fecha))}</td><td style="border:1px solid #999;padding:5px 14px;text-align:center">${esc(p.num)}</td></tr></table></div>
+    </div>
+    <div style="border:1px solid #999;margin-top:16px;width:55%"><div style="background:#eef2f7;padding:4px 8px;font-weight:bold;font-size:12px;border-bottom:1px solid #999">VENDIDO A</div><div style="padding:6px 8px;line-height:1.5">${clienteTxt}</div></div>
+    <table style="width:100%;border-collapse:collapse;margin-top:16px"><thead><tr style="background:#003366;color:#fff;font-size:12px;text-align:left"><th style="padding:7px 8px">ARTÍCULO</th><th style="padding:7px 8px">DESCRIPCIÓN</th><th style="padding:7px 8px;text-align:center">CANT.</th><th style="padding:7px 8px;text-align:right">PRECIO</th><th style="padding:7px 8px;text-align:right">IMPORTE</th></tr></thead><tbody>${filas}</tbody></table>
+    <table style="margin-left:auto;margin-top:10px;border-collapse:collapse">${p.ivuPct > 0 ? tot('Subtotal', money(p.subtotal)) + tot('IVU (' + esc(p.ivuPct) + '%)', money(p.ivu)) : ''}
+      <tr><td style="padding:8px;text-align:right;font-weight:bold;font-size:15px;border-top:2px solid #003366">TOTAL</td><td style="padding:8px;text-align:right;font-weight:bold;font-size:15px;border-top:2px solid #003366;background:#eef2f7">${money(p.total)}</td></tr></table>
+    ${sinP}
+    <div style="text-align:center;margin-top:22px;font-size:13px;color:#003366;font-weight:bold">${pie}</div></div>`;
 }
-function verRecibo(p) { reciboActual = p; $('reciboCont').innerHTML = htmlRecibo(p); $('modalRecibo').style.display = 'flex'; }
+function verRecibo(p) { if (!p) return; reciboActual = p; $('reciboCont').innerHTML = htmlRecibo(p); $('modalRecibo').style.display = 'flex'; }
+try { const f = localStorage.getItem('fmtReciboMJ'); if (f) $('reciboFmt').value = f; } catch (e) {}
 function verReciboCarrito() { if (items().length) verRecibo(armarPedido()); }
 function imprimirRecibo() {
   if (!reciboActual) return;
   let st = $('pageStyle'); if (!st) { st = document.createElement('style'); st.id = 'pageStyle'; document.head.appendChild(st); }
-  st.textContent = '@page{size:auto;margin:10mm}';
-  $('printArea').innerHTML = htmlRecibo(reciboActual); window.print();
+  const fmt = fmtRecibo();
+  st.textContent = fmt === 'ticket' ? '@page{size:80mm auto;margin:2mm}' : '@page{size:auto;margin:10mm}';
+  $('printArea').innerHTML = htmlRecibo(reciboActual, fmt); window.print();
 }
 async function compartirRecibo() {
   const p = reciboActual; if (!p) return;
   let tmp = null;
   try {
     if (!window.html2canvas) await new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
-    tmp = document.createElement('div'); tmp.style.cssText = 'position:fixed;left:-9999px;top:0;width:400px;background:#fff'; tmp.innerHTML = htmlRecibo(p); document.body.appendChild(tmp);
+    tmp = document.createElement('div'); tmp.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;width:' + (fmtRecibo() === 'ticket' ? '320px' : '640px'); tmp.innerHTML = htmlRecibo(p); document.body.appendChild(tmp);
     const cv = await html2canvas(tmp, { backgroundColor: '#ffffff', scale: 2 });
     const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
     const file = new File([blob], 'recibo-' + p.num + '.png', { type: 'image/png' });
@@ -646,6 +904,7 @@ function abrirPedidos() {
     $('listaPedidos').innerHTML = l.length ? l.map((p, i) => `
       <div class="cli-row"><b>${esc(p.num)}</b> · ${esc(fechaTxt(p.fecha))}<br>
       ${esc(p.cliente ? p.cliente.nombre + ' (nivel ' + p.cliente.nivel + ')' : 'Cliente al detal')} · <b>${money(p.total)}</b><br>
+      ${p.vendido ? '<span class="st-ok"><b>✅ Vendido</b> (inventario descontado)</span><br>' : '<button class="btn" style="background:#28a745;padding:6px 10px;margin:4px 0" onclick="confirmarVenta(' + i + ')">Confirmar venta (descuenta inventario)</button><br>'}
       <button class="link" onclick="verRecibo(pedidosCache[${i}])">Ver recibo</button>
       <button class="link" onclick="borrarPedido('${esc(p._k)}')">Eliminar</button></div>`).join('') : '<p>Aún no hay pedidos guardados.</p>';
     $('modalPedidos').style.display = 'flex';
@@ -727,21 +986,23 @@ const anchoRel = (t, bold) => { CV.font = (bold ? 'bold ' : '') + '100px Arial';
 function imprimirEtiquetas() {
   const conPines = $('ePines').checked, alto = $('ePapel').value === 'v', rot = +$('eGiro').value, W = alto ? 30 : 50, H = alto ? 50 : 30,
         AW = (rot ? H : W) - 4, AH = (rot ? W : H) - 4;
-  let html = '';
+  let html = '', sinBc = 0; const conBc = $('eBarras').checked;
   catalogo.forEach(c => {
     const n = Math.min(+(edEtiq[c.id] || {}).n || 0, 200); if (!n) return;
     const cod = String(c.codigo || ''), pin = conPines && c.pines ? String(c.pines) : '', d = String(c.descripcion || '');
-    let dfs = 3.4;
+    let dfs = 3.4, bc = '';
+    if (conBc) { try { bc = svgBarras(cod, AW, 7); } catch (e) { sinBc++; } }
     if (d) for (const f of [3.4, 3, 2.6, 2.3]) { dfs = f; if (Math.ceil(anchoRel(d, false) * f / AW * 1.08) <= 2) break; }
-    const cap = AH - (pin ? 5 : 0) - (d ? 8 : 0) - 1.6;
+    const cap = AH - (pin ? 5 : 0) - (d ? 8 : 0) - (bc ? 8.6 : 0) - 1.6;
     const fs = Math.max(3, Math.min(AW * 0.96 / anchoRel(cod, true), cap));
     const una = `<div class="etq" style="width:${W}mm;height:${H}mm"><div class="rot" style="width:${AW}mm;height:${AH}mm;transform:translate(-50%,-50%) rotate(${rot}deg)">` +
-      `<div class="e-code" style="font-size:${fs.toFixed(2)}mm">${esc(cod)}</div>` +
+      `<div class="e-code" style="font-size:${fs.toFixed(2)}mm">${esc(cod)}</div>` + bc +
       (pin ? `<div class="e-pines" style="font-size:4.2mm">${esc(pin)}</div>` : '') +
       (d ? `<div class="e-desc" style="width:${AW}mm;font-size:${dfs}mm">${esc(d)}</div>` : '') + `</div></div>`;
     for (let i = 0; i < n; i++) html += una;
   });
   if (!html) { alert('Escribe cuántas etiquetas quieres en al menos una pieza.'); return; }
+  if (sinBc) alert(sinBc + ' pieza(s) llevan caracteres que el código de barras no admite (tildes, ñ) y salen sin barras.');
   let st = $('pageStyle'); if (!st) { st = document.createElement('style'); st.id = 'pageStyle'; document.head.appendChild(st); }
   st.textContent = '@page{size:' + W + 'mm ' + H + 'mm;margin:0}';
   $('printArea').innerHTML = html; window.print();
