@@ -167,7 +167,7 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
   <div class="grid-container" id="connectorGrid"></div>
 </main>
 
-<footer><button onclick="accesoAdmin()">🔑 Admin</button><br><small style="color:#999">Versión: reportes + cobros + respaldo (21-nov-2026)</small></footer>
+<footer><button onclick="accesoAdmin()">🔑 Admin</button><br><small style="color:#999">Versión: registro corregido (25-nov-2026)</small></footer>
 
 <div class="barra-pedido" id="barraPedido">
   <span id="barraTexto"></span>
@@ -578,7 +578,7 @@ function ingresarCliente() {
   avisoLogin = true;
   auth.signInWithEmailAndPassword(id + MAILCLI, pass)
     .then(() => { cerrar('modalCliente'); $('cliPassIn').value = ''; })
-    .catch(() => { avisoLogin = false; alert('Teléfono o contraseña incorrectos, o no estás registrado.'); });
+    .catch(e => { avisoLogin = false; alert(['auth/wrong-password','auth/user-not-found','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code) ? 'Teléfono o contraseña incorrectos, o no estás registrado.' : 'No se pudo entrar (' + (e.code || e.message) + ').'); });
 }
 function registrarCliente() {
   const nombre = $('regNombre').value.trim(), negocio = $('regNegocio').value.trim(), id = soloNum($('regTel').value), registro = $('regNumero').value.replace(/[\s-]/g, ''), pass = $('regPass').value;
@@ -586,12 +586,22 @@ function registrarCliente() {
   const tipo = $('regTipo').value, largo = tipo === 'comerciante' ? 11 : 9;
   if (!new RegExp('^\\d{' + largo + '}$').test(registro)) { alert((tipo === 'comerciante' ? 'El registro de comerciante debe tener 11 números' : 'El número patronal debe tener 9 números') + ', sin letras.'); return; }
   if (pass.length < 6) { alert('La contraseña debe tener al menos 6 caracteres.'); return; }
-  auth.createUserWithEmailAndPassword(id + MAILCLI, pass).then(cred =>
-    refClientes.child(cred.user.uid).set({ id: cred.user.uid, nombre, negocio, registro, tipoRegistro: tipo, telefono: id, nivel: 0, fecha: new Date().toISOString() })
-  ).then(() => {
+  const guardar = cred => refClientes.child(cred.user.uid).once('value').then(sn => sn.exists() ? null :
+    refClientes.child(cred.user.uid).set({ id: cred.user.uid, nombre, negocio, registro, tipoRegistro: tipo, telefono: id, nivel: 0, fecha: new Date().toISOString() }));
+  const listo = () => {
     cerrar('modalCliente'); alert('¡Registro enviado! Te avisaremos cuando sea aprobado.');
     window.open(wa(`Hola M & J Distributors, me registré como cliente mayorista.\nNombre: ${nombre}\nNegocio: ${negocio || '-'}\n${tipo === 'comerciante' ? 'Registro de comerciante' : 'Número patronal'}: ${registro}\nTeléfono: ${id}`), '_blank');
-  }).catch(e => alert(e.code === 'auth/email-already-in-use' ? 'Ese teléfono ya está registrado. Usa "Ya estoy registrado".' : 'Error: ' + e.message));
+  };
+  auth.createUserWithEmailAndPassword(id + MAILCLI, pass).then(guardar).then(listo).catch(e => {
+    if (e.code === 'auth/email-already-in-use') {
+      // Se creó la cuenta en un intento anterior pero no se guardaron los datos: se completa con la misma contraseña
+      return auth.signInWithEmailAndPassword(id + MAILCLI, pass).then(guardar).then(listo)
+        .catch(e2 => alert(e2.code === 'auth/wrong-password' || e2.code === 'auth/invalid-credential' || e2.code === 'auth/invalid-login-credentials'
+          ? 'Ese teléfono ya tiene una cuenta, pero la contraseña que escribiste no es la misma. Usa "Ya estoy registrado" con la contraseña del primer intento, o escríbenos por WhatsApp.'
+          : 'No se pudieron guardar tus datos (' + (e2.code || e2.message) + ').\nAvísanos por WhatsApp: ' + (e2.code || e2.message)));
+    }
+    alert('Error al registrar (' + (e.code || e.message) + '): ' + e.message);
+  });
 }
 
 // ---------- Inventario ----------
