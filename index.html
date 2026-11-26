@@ -167,7 +167,7 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
   <div class="grid-container" id="connectorGrid"></div>
 </main>
 
-<footer><button onclick="accesoAdmin()">🔑 Admin</button><br><small style="color:#999">Versión: registro corregido (25-nov-2026)</small></footer>
+<footer><button onclick="accesoAdmin()">🔑 Admin</button><br><small style="color:#999">Versión: correo en registro (25-nov-2026)</small></footer>
 
 <div class="barra-pedido" id="barraPedido">
   <span id="barraTexto"></span>
@@ -217,15 +217,17 @@ footer button { background: none; border: none; color: #888; cursor: pointer; fo
     <h3 id="cliTitulo">Cliente mayorista</h3>
     <div id="cliLogin">
       <p class="hint">Ingresa con tu teléfono para ver tu precio mayorista.</p>
-      <div class="form-group"><label>Teléfono:</label><input type="tel" id="cliTelIn" placeholder="787-000-0000"></div>
+      <div class="form-group"><label>Correo electrónico:</label><input type="text" id="cliTelIn" placeholder="tucorreo@ejemplo.com" autocapitalize="off" autocomplete="username"><small class="hint">Si te registraste antes solo con teléfono, escribe tu teléfono.</small></div>
       <div class="form-group"><label>Contraseña:</label><input type="password" id="cliPassIn"></div>
       <div class="modal-buttons"><button class="btn btn-wa" onclick="ingresarCliente()">Ingresar</button></div>
+      <p class="hint"><button class="link" onclick="olvidePass()">¿Olvidaste tu contraseña?</button></p>
       <p class="hint">¿No estás registrado? <button class="link" onclick="mostrarRegistro(true)">Regístrate aquí</button></p>
     </div>
     <div id="cliReg" style="display:none">
       <p class="hint">Regístrate y te avisaremos cuando tu cuenta mayorista sea aprobada.</p>
       <div class="form-group"><label>Nombre:</label><input type="text" id="regNombre"></div>
       <div class="form-group"><label>Negocio:</label><input type="text" id="regNegocio"></div>
+      <div class="form-group"><label>Correo electrónico (para entrar y recuperar tu contraseña):</label><input type="email" id="regEmail" placeholder="tucorreo@ejemplo.com" autocapitalize="off"></div>
       <div class="form-group"><label>Teléfono (WhatsApp):</label><input type="tel" id="regTel" placeholder="787-000-0000"></div>
       <div class="form-group"><label>Tipo de número:</label><select id="regTipo" style="width:100%;padding:9px;border:1px solid var(--borde);border-radius:4px"><option value="comerciante">Registro de comerciante de PR (11 números)</option><option value="patronal">Número patronal (9 números)</option></select></div>
       <div class="form-group"><label>Número:</label><input type="text" id="regNumero" maxlength="14" inputmode="numeric" placeholder="Obligatorio"></div>
@@ -539,8 +541,7 @@ function guardarEntrada() {
 }
 function eliminarEntrada(id) { if (confirm("¿Deseas eliminar este conector de la nube?")) refRoot.update({ ['conectores/' + id]: null, ['mayor1/' + id]: null, ['mayor2/' + id]: null, ['mayor3/' + id]: null }); }
 function accesoAdmin() {
-  const u = auth.currentUser;
-  if (u && !u.email.endsWith(MAILCLI)) { if (confirm('¿Cerrar la sesión de administrador?')) auth.signOut(); return; }
+  if (esAdmin()) { if (confirm('¿Cerrar la sesión de administrador?')) auth.signOut(); return; }
   $('modalAdmin').style.display = 'flex';
 }
 function loginAdmin() {
@@ -573,34 +574,47 @@ function abrirCliente() {
 }
 let avisoLogin = false;
 function ingresarCliente() {
-  const id = soloNum($('cliTelIn').value), pass = $('cliPassIn').value;
-  if (id.length < 10 || !pass) { alert('Escribe tu teléfono completo y tu contraseña.'); return; }
+  const raw = $('cliTelIn').value.trim(), pass = $('cliPassIn').value, esMail = raw.includes('@');
+  if ((!esMail && soloNum(raw).length < 10) || !pass) { alert('Escribe tu correo (o tu teléfono completo) y tu contraseña.'); return; }
   avisoLogin = true;
-  auth.signInWithEmailAndPassword(id + MAILCLI, pass)
+  auth.signInWithEmailAndPassword(esMail ? raw.toLowerCase() : soloNum(raw) + MAILCLI, pass)
     .then(() => { cerrar('modalCliente'); $('cliPassIn').value = ''; })
-    .catch(e => { avisoLogin = false; alert(['auth/wrong-password','auth/user-not-found','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code) ? 'Teléfono o contraseña incorrectos, o no estás registrado.' : 'No se pudo entrar (' + (e.code || e.message) + ').'); });
+    .catch(e => { avisoLogin = false; alert(['auth/wrong-password','auth/user-not-found','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code) ? 'Correo o contraseña incorrectos, o no estás registrado.' : 'No se pudo entrar (' + (e.code || e.message) + ').'); });
 }
+function olvidePass() {
+  const e = (prompt('Escribe el correo con el que te registraste:', $('cliTelIn').value.includes('@') ? $('cliTelIn').value.trim() : '') || '').trim().toLowerCase();
+  if (!e) return;
+  if (!e.includes('@')) { alert('Escribe un correo válido. Si te registraste solo con teléfono, escríbenos por WhatsApp y te ayudamos.'); return; }
+  auth.sendPasswordResetEmail(e).then(() => alert('Listo. Si ese correo está registrado, te enviamos un enlace para crear una contraseña nueva. Revisa también la carpeta de correo no deseado (spam).'))
+    .catch(er => alert(er.code === 'auth/invalid-email' ? 'Ese correo no es válido.' : 'No se pudo enviar (' + (er.code || er.message) + ').'));
+}
+let registrando = false;
 function registrarCliente() {
-  const nombre = $('regNombre').value.trim(), negocio = $('regNegocio').value.trim(), id = soloNum($('regTel').value), registro = $('regNumero').value.replace(/[\s-]/g, ''), pass = $('regPass').value;
+  const nombre = $('regNombre').value.trim(), negocio = $('regNegocio').value.trim(), id = soloNum($('regTel').value), email = $('regEmail').value.trim().toLowerCase(), registro = $('regNumero').value.replace(/[\s-]/g, ''), pass = $('regPass').value;
   if (!nombre || id.length < 10) { alert('Escribe tu nombre y tu teléfono completo (10 dígitos).'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { alert('Escribe un correo electrónico válido. Lo necesitas para entrar y para recuperar tu contraseña.'); return; }
   const tipo = $('regTipo').value, largo = tipo === 'comerciante' ? 11 : 9;
   if (!new RegExp('^\\d{' + largo + '}$').test(registro)) { alert((tipo === 'comerciante' ? 'El registro de comerciante debe tener 11 números' : 'El número patronal debe tener 9 números') + ', sin letras.'); return; }
   if (pass.length < 6) { alert('La contraseña debe tener al menos 6 caracteres.'); return; }
-  const guardar = cred => refClientes.child(cred.user.uid).once('value').then(sn => sn.exists() ? null :
-    refClientes.child(cred.user.uid).set({ id: cred.user.uid, nombre, negocio, registro, tipoRegistro: tipo, telefono: id, nivel: 0, fecha: new Date().toISOString() }));
+  registrando = true;
+  const datos = uid => ({ id: uid, nombre, negocio, registro, tipoRegistro: tipo, telefono: id, email, nivel: 0, fecha: new Date().toISOString() });
+  const guardarNuevo = cred => refClientes.child(cred.user.uid).set(datos(cred.user.uid));
+  const guardar = cred => refClientes.child(cred.user.uid).once('value').then(sn => sn.exists() ? null : refClientes.child(cred.user.uid).set(datos(cred.user.uid)));
   const listo = () => {
+    registrando = false; evaluarSesion(auth.currentUser);
     cerrar('modalCliente'); alert('¡Registro enviado! Te avisaremos cuando sea aprobado.');
-    window.open(wa(`Hola M & J Distributors, me registré como cliente mayorista.\nNombre: ${nombre}\nNegocio: ${negocio || '-'}\n${tipo === 'comerciante' ? 'Registro de comerciante' : 'Número patronal'}: ${registro}\nTeléfono: ${id}`), '_blank');
+    window.open(wa(`Hola M & J Distributors, me registré como cliente mayorista.\nNombre: ${nombre}\nNegocio: ${negocio || '-'}\n${tipo === 'comerciante' ? 'Registro de comerciante' : 'Número patronal'}: ${registro}\nTeléfono: ${id}\nCorreo: ${email}`), '_blank');
   };
-  auth.createUserWithEmailAndPassword(id + MAILCLI, pass).then(guardar).then(listo).catch(e => {
+  const falla = msg => { registrando = false; auth.signOut(); alert(msg); };
+  auth.createUserWithEmailAndPassword(email, pass).then(guardarNuevo).then(listo).catch(e => {
     if (e.code === 'auth/email-already-in-use') {
-      // Se creó la cuenta en un intento anterior pero no se guardaron los datos: se completa con la misma contraseña
-      return auth.signInWithEmailAndPassword(id + MAILCLI, pass).then(guardar).then(listo)
-        .catch(e2 => alert(e2.code === 'auth/wrong-password' || e2.code === 'auth/invalid-credential' || e2.code === 'auth/invalid-login-credentials'
-          ? 'Ese teléfono ya tiene una cuenta, pero la contraseña que escribiste no es la misma. Usa "Ya estoy registrado" con la contraseña del primer intento, o escríbenos por WhatsApp.'
-          : 'No se pudieron guardar tus datos (' + (e2.code || e2.message) + ').\nAvísanos por WhatsApp: ' + (e2.code || e2.message)));
+      // Cuenta creada en un intento anterior sin sus datos: se completa con la misma contraseña
+      return auth.signInWithEmailAndPassword(email, pass).then(guardar).then(listo)
+        .catch(e2 => falla(e2.code === 'auth/wrong-password' || e2.code === 'auth/invalid-credential' || e2.code === 'auth/invalid-login-credentials'
+          ? 'Ese correo ya tiene una cuenta, pero la contraseña no es la misma. Usa "Ya estoy registrado" (o "¿Olvidaste tu contraseña?").'
+          : 'No se pudieron guardar tus datos (' + (e2.code || e2.message) + '). Avísanos por WhatsApp.'));
     }
-    alert('Error al registrar (' + (e.code || e.message) + '): ' + e.message);
+    falla('Error al registrar (' + (e.code || e.message) + '): ' + e.message + (/PERMISSION/i.test(e.code + e.message) ? '\n\nLas reglas de Firebase no permiten guardar el registro. Hay que publicar las reglas nuevas (sección "clientes").' : ''));
   });
 }
 
@@ -789,18 +803,24 @@ function svgBarras(txt, anchoMm, altoMm) {
 
 let escuchas = [];
 function escuchar(n) { const r = firebase.database().ref('mayor' + n); escuchas.push(r); r.on('value', sn => { pm[n] = sn.val() || {}; filtrar(); }); }
-auth.onAuthStateChanged(u => {
+function evaluarSesion(u) {
   escuchas.forEach(r => r.off()); escuchas = []; cliente = null; pm = { 1: {}, 2: {}, 3: {} }; inv = {}; barrasMap = {};
-  document.body.classList.toggle('admin', !!u && !u.email.endsWith(MAILCLI));
-  if (!u) return actualizarCliente();
-  if (!u.email.endsWith(MAILCLI)) { [1, 2, 3].forEach(escuchar); escucharInv(); return actualizarCliente(); }
+  document.body.classList.remove('admin');
+  if (!u || registrando) return actualizarCliente();
   refClientes.child(u.uid).once('value').then(sn => {
     const d = sn.val();
-    if (d && d.nivel) { cliente = d; escuchar(d.nivel); }
-    else if (avisoLogin) alert('Tu registro está pendiente de aprobación. Te avisaremos por WhatsApp.');
-    avisoLogin = false; actualizarCliente();
+    if (d) {
+      if (d.nivel) { cliente = d; escuchar(d.nivel); }
+      else if (avisoLogin) alert('Tu registro está pendiente de aprobación. Te avisaremos por WhatsApp.');
+      avisoLogin = false; return actualizarCliente();
+    }
+    // Sin registro de cliente: solo el administrador puede leer la lista completa
+    return refClientes.once('value').then(() => {
+      document.body.classList.add('admin'); [1, 2, 3].forEach(escuchar); escucharInv(); actualizarCliente();
+    }).catch(() => actualizarCliente());
   }).catch(() => actualizarCliente());
-});
+}
+auth.onAuthStateChanged(evaluarSesion);
 
 // Administrador: aprobar clientes y asignar nivel
 function abrirClientes() {
@@ -808,7 +828,7 @@ function abrirClientes() {
     const l = Object.values(sn.val() || {}).sort((a, b) => (a.nivel ? 1 : 0) - (b.nivel ? 1 : 0) || (a.nombre || '').localeCompare(b.nombre || ''));
     $('listaClientes').innerHTML = l.length ? l.map(c => `
       <div class="cli-row"><b>${esc(c.nombre)}</b> ${c.nivel ? '' : '<span class="pend">PENDIENTE</span>'}<br>
-      ${esc(c.negocio || '')} · ${esc(c.telefono)}<br>${c.tipoRegistro === 'patronal' ? 'Nº patronal' : 'Registro comerciante'}: ${esc(c.registro || 'no indicado')}
+      ${esc(c.negocio || '')} · ${esc(c.telefono)}${c.email ? ' · ' + esc(c.email) : ''}<br>${c.tipoRegistro === 'patronal' ? 'Nº patronal' : 'Registro comerciante'}: ${esc(c.registro || 'no indicado')}
       <select onchange="asignarNivel('${esc(c.id)}', this.value)">
         ${[0, 1, 2, 3].map(n => `<option value="${n}" ${+c.nivel === n ? 'selected' : ''}>${n ? 'Mayorista nivel ' + n : 'Sin acceso (pendiente)'}</option>`).join('')}
       </select>
@@ -1062,7 +1082,7 @@ function csvCatalogo() {
 }
 function csvClientes() {
   firebase.database().ref('clientes').once('value').then(s => {
-    const f = [['Nombre', 'Negocio', 'Teléfono', 'Registro', 'Nivel', 'IVU']]; s.forEach(c => { const x = c.val(); f.push([x.nombre, x.negocio, x.telefono, x.registro || '', x.nivel, x.ivu == null ? '' : x.ivu]); });
+    const f = [['Nombre', 'Negocio', 'Teléfono', 'Correo', 'Registro', 'Nivel', 'IVU']]; s.forEach(c => { const x = c.val(); f.push([x.nombre, x.negocio, x.telefono, x.email || '', x.registro || '', x.nivel, x.ivu == null ? '' : x.ivu]); });
     csvDescargar('clientes-mj-' + hoyISO() + '.csv', f);
   }).catch(e => alert('Error: ' + e.message));
 }
